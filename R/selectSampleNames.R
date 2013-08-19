@@ -12,7 +12,7 @@ rppa.selectFactors <- function(spots, factor="SampleName")
   {
     tkinsert(tl,"end",spotNames[i])
   }
-  tkselection.set(tl,0) rm
+  tkselection.set(tl,0) 
   
   OKSelection <- function()
   {
