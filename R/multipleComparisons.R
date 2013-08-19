@@ -53,7 +53,7 @@ rppa.dunnett <- function(slide, referenceSample="OTC#3")
   }
 }
 
-rppa.plot.dunnett <- function(pvalues, p.cutoff=1)
+rppa.plot.dunnett <- function(pvalues, p.cutoff=1, title="Dunnett's test")
 {
   require(ggplot2)
   require(scales)
@@ -64,10 +64,11 @@ rppa.plot.dunnett <- function(pvalues, p.cutoff=1)
   pvalues.subset[pvalues.subset$pvalues < 0.001, "symbol"] <- "**"
   pvalues.subset[pvalues.subset$pvalues < 0.0001, "symbol"] <- "***"
   limits <- aes(ymax = estimates + stderror, ymin = estimates - stderror)
-  q <- qplot(x=Samples, y=estimates, data=pvalues.subset, fill=pvalues, ylab="estimated difference", geom="bar", stat="identity", label=symbol)
+  q <- qplot(x=Samples, y=estimates, data=pvalues.subset, main=title, fill=pvalues, ylab="estimated difference", geom="bar", stat="identity", label=symbol)
   q <- q + geom_errorbar(limits, position="dodge", width=0.25)
   q <- q + theme(axis.text.x = element_text(angle=-45, hjust=0, vjust=1))
-  q <- q + scale_fill_gradient2(trans="log", low="red", guide="legend", mid="orange", high="yellow", breaks=10^(-(seq(-3, 12, by=3))))
+  #q <- q + scale_fill_gradient2(trans="log", low="red", guide="legend", mid="orange", high="yellow", breaks=10^(-(seq(-3, 12, by=3))))
+  q <- q + scale_fill_gradient2(low="red", trans="log10", mid="orange", high="yellow", breaks=10^(-(seq(0, 9, by=1))), labels=paste(10^(-(seq(0, 9, by=1))), c("", "", "*", "**", rep("***",6))))
   q <- q + facet_grid(A ~ B)
   q <- q + geom_text(aes(y = estimates + stderror), vjust=0.1)
   q <- q + scale_y_continuous(labels = percent)
