@@ -45,9 +45,6 @@ rppa.serialDilution <- function(spots, initial.dilution.estimate=2, sensible.min
   
   #calculate matrix of dilutions
   spots.m <- rppa.serialDilution.dilutionMatrix(spots.c, numOfDilutions)
-
-  #noise correction
-  spots.m <- rppa.noiseCorrection(spots.m,highestDilutionFirst=T, subtractNoiseFromAll=F)
   
   #compute the actual protein estimates using the serial dilution method
   spots.e <- rppa.serialDilution.compute(spots.m, initial.dilution.estimate, sensible.min, sensible.max, method, slideTitle)
@@ -185,8 +182,9 @@ rppa.serialDilution.compute <- function(spots.m, initial.dilution.estimate=2, se
   if(make.plot){
     #plot serial dilution curve
     require(ggplot2)
-    print(ggplot(pairedData, aes(x=x, y=y)) + labs(title=paste("Serial Dilution Curve Fit: ", slideTitle, ", estimated dilution factor ", round(D, 2))) + xlab("Signal at next dilution step") + ylab("Signal") + geom_point() + geom_line(data=fittedData, color="blue") + geom_abline(intercept=0, slope=1, color="red"))
+    require(gridExtra)
     print(ggplot(fittedData, aes(x=y, y=log2(x))) + labs(title=paste("Signal to concentration estimate plot: ", slideTitle)) + ylab("Signal") + xlab("Concentration estimate") + geom_point() + geom_smooth(aes(group=1), method="loess"))
+    print(ggplot(pairedData, aes(x=x, y=y)) + labs(title=paste("Serial Dilution Curve Fit: ", slideTitle, ", estimated dilution factor ", round(D, 2))) + xlab("Signal at next dilution step") + ylab("Signal") + geom_point() + geom_line(data=fittedData, color="blue") + geom_abline(intercept=0, slope=1, color="red"))
   }
   
   #estimate protein concentrations

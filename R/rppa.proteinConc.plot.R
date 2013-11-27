@@ -27,12 +27,14 @@ function(data.protein.conc, title="", swap=F, horizontal.line=T, error.bars=T, s
   }
   
   else if(!is.null(data.protein.conc$Deposition)){  
+      data.protein.conc$Deposition <- as.factor(data.protein.conc$Deposition)
       p <- qplot(Sample, concentrations, data=data.protein.conc, 
                  main=title, stat="identity", 
                  ylab="Estimated Protein Concentration (Relative Scale)",xlab="Sample", geom="bar", fill=Deposition, position="dodge")
   }
   else if(!is.null(data.protein.conc$Fill))
   {
+    data.protein.conc$Fill <- as.factor(data.protein.conc$Fill)
     p <- qplot(Sample, concentrations, data=data.protein.conc, 
                main=title, stat="identity",
                ylab="Estimated Protein Concentration (Relative Scale)",xlab="Sample", geom="bar", fill=Fill, position="dodge")   

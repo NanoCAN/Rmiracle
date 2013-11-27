@@ -5,7 +5,62 @@ Version: 0.6.8.3
 Date: 2013-08-18
 Author: Markus List
 Maintainer: Markus List <mlist@health.sdu.dk>
-Description: This package implements a work-flow for the analysis of reverse-phase-protein arrays using various techniques, such as logistic curves, SuperCurve, serial dilution curve or non-parametric fits. The package is designed to work on MIRACLE output data. MIRACLE is a web application designed for the management of layout and experimental information for reverse phase protein arrays. This package extends MIRACLE's capabilities to also include end-to-end data analysis including filtering, quantification, normalization and statistical testing.
+Description: This package implements a work-flow for the analysis of
+    reverse-phase-protein arrays using various techniques, such as logistic
+    curves, SuperCurve, serial dilution curve or non-parametric fits. The
+    package is designed to work on MIRACLE output data. MIRACLE is a web
+    application designed for the management of layout and experimental
+    information for reverse phase protein arrays. This package extends
+    MIRACLE's capabilities to also include end-to-end data analysis including
+    filtering, quantification, normalization and statistical testing.
 License: GPL-3
-Depends: R (>= 2.14.0), RJSONIO, Hmisc, msm, doBy, foreach, gam ,ggplot2, gridExtra, limma, mgcv, minpack.lm, multcomp, plyr, reshape, scales
-Suggests: SuperCurve, manipulate
+Depends:
+    R (>= 2.14.0),
+    RJSONIO,
+    Hmisc,
+    msm,
+    doBy,
+    foreach,
+    gam ,ggplot2,
+    gridExtra,
+    limma,
+    mgcv,
+    minpack.lm,
+    multcomp,
+    plyr,
+    reshape,
+    scales,
+    cobs
+Suggests:
+    SuperCurve,
+    manipulate
+Collate:
+    'HuNonParam.R'
+    'JSON.R'
+    'VSfunctions.R'
+    'attributes.R'
+    'batch.R'
+    'blockShift.R'
+    'boxPlotComparison.R'
+    'compareSlides.R'
+    'heatmap.R'
+    'multipleComparisons.R'
+    'normalization.R'
+    'orderSampleNames.R'
+    'plotting.R'
+    'proteinConc.R'
+    'proteinConcNormalization.R'
+    'proteinConcOverview.R'
+    'reno.R'
+    'reorderFactors.R'
+    'rppa.control.dilutionFactor.R'
+    'rppa.proteinConc.npi.R'
+    'rppa.proteinConc.plot.R'
+    'selectReference.R'
+    'selectSampleNames.R'
+    'serialDilution.R'
+    'serialDilution.summarize.R'
+    'superCurve.R'
+    'surfaceNormalization.R'
+    'tabus.R'
+    'variableSlopeNormalization.R'
