@@ -1,4 +1,4 @@
-rppa.load <- function (barcode=NA, slideIndex=NA, baseUrl = "http://localhost:8080/MIRACLE/spotExport/", filter.bad.signals=T, apply.shifts=T) 
+rppa.load <- function (connection=connection, barcode=NA, slideIndex=NA, baseUrl = "http://localhost:8080/MIRACLE/spotExport/", filter.bad.signals=T, apply.shifts=T) 
 {
   require(RJSONIO)
   require(plyr)
@@ -11,8 +11,9 @@ rppa.load <- function (barcode=NA, slideIndex=NA, baseUrl = "http://localhost:80
   
   else if(is.na(slideIndex))
   {
-    slideIndex <- fromJSON(paste(baseUrl, "getIdFromBarcode/", 
-                             barcode, sep = ""))
+    slideIndex <- getURL(paste(baseUrl, "getIdFromBarcode/", 
+                             barcode, sep = ""), curl=connection)
+    slideIndex <- fromJSON(slideIndex)
     if(length(slideIndex) > 1)
     {
       cat(paste("There are several options for barcode", barcode,". Please make a selection:"))
@@ -27,8 +28,8 @@ rppa.load <- function (barcode=NA, slideIndex=NA, baseUrl = "http://localhost:80
   
   #read the data from database
   cat(paste("Reading spots for slide index", slideIndex, "\n"))
-  spots <- ldply(fromJSON(paste(baseUrl, "exportAsJSON/", slideIndex, 
-                                sep = ""), simplify = T, nullValue = "NA"))
+  spots <- getURL(paste(baseUrl, "exportAsJSON/", slideIndex, sep = ""), curl=connection)
+  spots <- ldply(fromJSON(spots, simplify = T, nullValue = "NA"))
   cat(paste(dim(spots)[1], "spots read. Formatting...\n"))
       
   #replace "NA" with proper NA
@@ -57,10 +58,9 @@ rppa.load <- function (barcode=NA, slideIndex=NA, baseUrl = "http://localhost:80
   spots$PlateLayout <- as.integer(spots$PlateLayout)
   
   #add shifts
-  if (length(fromJSON(paste(baseUrl, "exportShiftsAsJSON/", 
-                            slideIndex, sep = ""))) > 0) {
-    shifts <- ldply(fromJSON(paste(baseUrl, "exportShiftsAsJSON/", 
-                                   slideIndex, sep = ""), simplify = T, nullValue = NA))
+  shifts <- getURL(paste(baseUrl, "exportShiftsAsJSON/", slideIndex, sep = ""), curl=connection)
+  if (length(fromJSON(shifts)) > 0) {
+    shifts <- ldply(fromJSON(shifts, simplify = T, nullValue = NA))
     spots <- merge(spots, shifts, by = "Block", all.x = T)
   }
   else{
@@ -72,8 +72,8 @@ rppa.load <- function (barcode=NA, slideIndex=NA, baseUrl = "http://localhost:80
   spots <- rppa.hshift(spots)
   
   #add depositions
-  depositionPattern <- scan(paste(baseUrl, "getDepositionPattern/", 
-                                  slideIndex, sep = ""), what = "integer")
+  depositionPattern <- scan(text=getURL(paste(baseUrl, "getDepositionPattern/", 
+                                  slideIndex, sep = ""), curl=connection), what = "integer")
   depositionPattern <- gsub("\\[", "", depositionPattern)
   depositionPattern <- gsub("\\]", "", depositionPattern)
   depositionPattern <- as.integer(strsplit(depositionPattern, 
@@ -90,12 +90,12 @@ rppa.load <- function (barcode=NA, slideIndex=NA, baseUrl = "http://localhost:80
     spots <- rppa.filter.neg.values(spots)
   }
   
-  spots <- rppa.set.blocksPerRow(spots, as.integer(scan(paste(baseUrl, "getBlocksPerRow/", 
-                                                   slideIndex, sep = ""), what = "integer")))
-  spots <- rppa.set.title(spots, paste(scan(paste(baseUrl, "getTitle/", 
-                                                   slideIndex, sep = ""), what = "character"), collapse=" "))
-  spots <- rppa.set.antibody(spots, paste(scan(paste(baseUrl, "getAntibody/", 
-                                                   slideIndex, sep = ""), what = "character"), collapse=" "))
+  spots <- rppa.set.blocksPerRow(spots, as.integer(scan(text=getURL(paste(baseUrl, "getBlocksPerRow/", 
+                                                   slideIndex, sep = ""), curl=connection), what = "integer")))
+  spots <- rppa.set.title(spots, paste(scan(text=getURL(paste(baseUrl, "getTitle/", 
+                                                   slideIndex, sep = ""), curl=connection), what = "character"), collapse=" "))
+  spots <- rppa.set.antibody(spots, paste(scan(text=getURL(paste(baseUrl, "getAntibody/", 
+                                                   slideIndex, sep = ""), curl=connection), what = "character"), collapse=" "))
   cat("...done")
   return(spots)
 }
