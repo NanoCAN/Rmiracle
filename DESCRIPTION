@@ -64,3 +64,4 @@ Collate:
     'surfaceNormalization.R'
     'tabus.R'
     'variableSlopeNormalization.R'
+    'authenticate.R'
