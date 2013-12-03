@@ -8,13 +8,13 @@ rppa.authenticate <- function(baseUrl="http://localhost:8080/MIRACLE/", user, pa
   
   #Set RCurl pars
   curl = getCurlHandle()
-  curlSetOpt(ssl.verifypeer=FALSE, timeout=60, cookiefile="cookies.txt", cookiejar="cookies.txt", useragent = agent, followlocation = TRUE, curl=curl, verbose=verbose)
+  curlSetOpt(ssl.verifypeer=FALSE, timeout=60, cookiefile=tempfile(), cookiejar=tempfile(), useragent = agent, followlocation = TRUE, curl=curl, verbose=verbose)
 
   #open login page
   getURL(loginUrl, curl=curl)
   
   #Post login form
-  postForm(authenticateUrl, .params= list(j_username="mlist", j_password="password"), curl=curl, style="POST")
+  postForm(authenticateUrl, .params= list(j_username=user, j_password=password), curl=curl, style="POST")
   
   return(curl)
 }
