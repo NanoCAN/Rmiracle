@@ -17,6 +17,7 @@ License: GPL-3
 Depends:
     R (>= 2.14.0),
     RJSONIO,
+    RCurl,
     Hmisc,
     msm,
     doBy,

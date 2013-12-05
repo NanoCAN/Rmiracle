@@ -18,8 +18,8 @@ rppa.load <- function (connection=connection, barcode=NA, slideIndex=NA, baseUrl
     {
       cat(paste("There are several options for barcode", barcode,". Please make a selection:"))
       for(i in slideIndex){
-        cat(paste(i, ":", paste(scan(paste(baseUrl, "getTitle/", 
-             i, sep = ""), what = "character"), collapse=" ")))  
+        cat(paste(i, ":", paste(scan(text=getURL(paste(baseUrl, "getTitle/", 
+             i, sep = ""), curl=connection), what="character"), collapse=" ")))  
       }
       slideIndex <- readline("Please enter a slide index:")
     }
