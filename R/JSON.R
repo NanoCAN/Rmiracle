@@ -1,15 +1,15 @@
-rppa.load <- function (connection=NA, securityToken=NA, barcode=NA, slideIndex=NA, baseUrl = "http://localhost:8080/MIRACLE/spotExport/", filter.bad.signals=T, apply.shifts=T) 
+rppa.load <- function (connection=NULL, barcode=NA, slideIndex=NA, securityToken=NA, baseUrl = "http://localhost:8080/MIRACLE/spotExport/", filter.bad.signals=T, apply.shifts=T) 
 {
   require(RJSONIO)
   require(plyr)
   
   #no means of authentication given
-  if(is.na(connection && is.na(securityToken))){
+  if(is.null(connection) && is.na(securityToken)){
     cat("Cannot authenticate. Either login using rppa.authenticate or provide a security token\n")
   }
   
   #authentication via securityToken
-  if(is.na(connection && !is.na(securityToken))){
+  if(is.null(connection) && !is.na(securityToken)){
     cat("Using security token authentication\n")
     
     #create curl handle without authentication
