@@ -1,7 +1,36 @@
-rppa.load <- function (connection=connection, barcode=NA, slideIndex=NA, baseUrl = "http://localhost:8080/MIRACLE/spotExport/", filter.bad.signals=T, apply.shifts=T) 
+rppa.load <- function (connection=NA, securityToken=NA, barcode=NA, slideIndex=NA, baseUrl = "http://localhost:8080/MIRACLE/spotExport/", filter.bad.signals=T, apply.shifts=T) 
 {
   require(RJSONIO)
   require(plyr)
+  
+  #no means of authentication given
+  if(is.na(connection && is.na(securityToken))){
+    cat("Cannot authenticate. Either login using rppa.authenticate or provide a security token\n")
+  }
+  
+  #authentication via securityToken
+  if(is.na(connection && !is.na(securityToken))){
+    cat("Using security token authentication\n")
+    
+    #create curl handle without authentication
+    agent="Mozilla/5.0" #or whatever 
+    
+    #Set RCurl pars
+    connection = getCurlHandle()
+    curlSetOpt(ssl.verifypeer=FALSE, timeout=60, cookiefile=tempfile(), cookiejar=tempfile(), useragent = agent, followlocation = TRUE, curl=connection, verbose=FALSE)
+    
+    #first check if security token is valid
+    isTokenValid <- scan(text=getURL(paste(baseUrl, "isSecurityTokenValid/", securityToken, sep = ""), curl=connection), what="boolean")
+    if(isTokenValid) slideIndex <- scan(text=getURL(paste(baseUrl, "getSlideIdFromSecurityToken/", securityToken, sep = ""), curl=connection), what="integer")
+    else{
+      cat("Security token is invalid!\n")
+      return(NA)
+    } 
+  }
+  
+  else{
+    cat("Using user authentication\n")
+  }
   
   #check input
   if(is.na(slideIndex) && is.na(barcode)){
@@ -11,15 +40,18 @@ rppa.load <- function (connection=connection, barcode=NA, slideIndex=NA, baseUrl
   
   else if(is.na(slideIndex))
   {
-    slideIndex <- getURL(paste(baseUrl, "getIdFromBarcode/", 
-                             barcode, sep = ""), curl=connection)
+    barcodeUrl <- paste(baseUrl, "getIdFromBarcode/", barcode, sep = "")
+    if(!is.na(securityToken)) barcodeUrl <- paste(barcodeUrl, "?securityToken=", securityToken, sep="")
+    slideIndex <- getURL(barcodeUrl, curl=connection)
     slideIndex <- fromJSON(slideIndex)
     if(length(slideIndex) > 1)
     {
       cat(paste("There are several options for barcode", barcode,". Please make a selection:"))
       for(i in slideIndex){
-        cat(paste(i, ":", paste(scan(text=getURL(paste(baseUrl, "getTitle/", 
-             i, sep = ""), curl=connection), what="character"), collapse=" ")))  
+        titleUrl <- paste(baseUrl, "getTitle/", i, sep = "")
+        if(!is.na(securityToken)) titleUrl <- paste(titleUrl, "?securityToken=", securityToken, sep="")
+                           
+        cat(paste(i, ":", paste(scan(text=getURL(titleUrl, curl=connection), what="character"), collapse=" ")))  
       }
       slideIndex <- readline("Please enter a slide index:")
     }
@@ -28,7 +60,10 @@ rppa.load <- function (connection=connection, barcode=NA, slideIndex=NA, baseUrl
   
   #read the data from database
   cat(paste("Reading spots for slide index", slideIndex, "\n"))
-  spots <- getURL(paste(baseUrl, "exportAsJSON/", slideIndex, sep = ""), curl=connection)
+  spotsUrl <- paste(baseUrl, "exportAsJSON/", slideIndex, sep = "")
+  if(!is.na(securityToken)) spotsUrl <- paste(spotsUrl, "?securityToken=", securityToken, sep="")
+  
+  spots <- getURL(spotsUrl, curl=connection)
   spots <- ldply(fromJSON(spots, simplify = T, nullValue = "NA"))
   cat(paste(dim(spots)[1], "spots read. Formatting...\n"))
       
@@ -58,7 +93,10 @@ rppa.load <- function (connection=connection, barcode=NA, slideIndex=NA, baseUrl
   spots$PlateLayout <- as.integer(spots$PlateLayout)
   
   #add shifts
-  shifts <- getURL(paste(baseUrl, "exportShiftsAsJSON/", slideIndex, sep = ""), curl=connection)
+  shiftUrl <- paste(baseUrl, "exportShiftsAsJSON/", slideIndex, sep = "")
+  if(!is.na(securityToken)) shiftUrl <- paste(shiftUrl, "?securityToken=", securityToken, sep="")
+  
+  shifts <- getURL(shiftUrl, curl=connection)
   if (length(fromJSON(shifts)) > 0) {
     shifts <- ldply(fromJSON(shifts, simplify = T, nullValue = NA))
     spots <- merge(spots, shifts, by = "Block", all.x = T)
@@ -72,8 +110,10 @@ rppa.load <- function (connection=connection, barcode=NA, slideIndex=NA, baseUrl
   spots <- rppa.hshift(spots)
   
   #add depositions
-  depositionPattern <- scan(text=getURL(paste(baseUrl, "getDepositionPattern/", 
-                                  slideIndex, sep = ""), curl=connection), what = "integer")
+  deposUrl <- paste(baseUrl, "getDepositionPattern/", slideIndex, sep = "")
+  if(!is.na(securityToken)) deposUrl <- paste(deposUrl, "?securityToken=", securityToken, sep="")
+  
+  depositionPattern <- scan(text=getURL(deposUrl, curl=connection), what = "integer")
   depositionPattern <- gsub("\\[", "", depositionPattern)
   depositionPattern <- gsub("\\]", "", depositionPattern)
   depositionPattern <- as.integer(strsplit(depositionPattern, 
@@ -89,14 +129,19 @@ rppa.load <- function (connection=connection, barcode=NA, slideIndex=NA, baseUrl
     spots <- rppa.filter.flagged(spots)
     spots <- rppa.filter.neg.values(spots)
   }
+  blocksUrl <- paste(baseUrl, "getBlocksPerRow/", slideIndex, sep = "")
+  if(!is.na(securityToken)) blocksUrl <- paste(blocksUrl, "?securityToken=", securityToken, sep="")
   
-  spots <- rppa.set.blocksPerRow(spots, as.integer(scan(text=getURL(paste(baseUrl, "getBlocksPerRow/", 
-                                                   slideIndex, sep = ""), curl=connection), what = "integer")))
-  spots <- rppa.set.title(spots, paste(scan(text=getURL(paste(baseUrl, "getTitle/", 
-                                                   slideIndex, sep = ""), curl=connection), what = "character"), collapse=" "))
-  spots <- rppa.set.antibody(spots, paste(scan(text=getURL(paste(baseUrl, "getAntibody/", 
-                                                   slideIndex, sep = ""), curl=connection), what = "character"), collapse=" "))
-  cat("...done")
+  titleUrl <- paste(baseUrl, "getTitle/", slideIndex, sep = "")
+  if(!is.na(securityToken)) titleUrl <- paste(titleUrl, "?securityToken=", securityToken, sep="")
+  
+  antibodyUrl <- paste(baseUrl, "getAntibody/", slideIndex, sep = "")                     
+  if(!is.na(securityToken)) antibodyUrl <- paste(antibodyUrl, "?securityToken=", securityToken, sep="")
+  
+  spots <- rppa.set.blocksPerRow(spots, as.integer(scan(text=getURL(blocksUrl, curl=connection), what = "integer")))
+  spots <- rppa.set.title(spots, paste(scan(text=getURL(titleUrl, curl=connection), what = "character"), collapse=" "))
+  spots <- rppa.set.antibody(spots, paste(scan(text=getURL(antibodyUrl, curl=connection), what = "character"), collapse=" "))
+  cat("...everything done. returning data.")
   return(spots)
 }
 
