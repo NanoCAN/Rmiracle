@@ -1,6 +1,118 @@
-rppa.proteinConc.normalize <- function(slideA, slideB, normalize.with.median.first = T, 
+rppa.proteinConc.normalize <- function(slideA, slideB, method="singleHK", normalize.with.median.first = T, 
                                        target.column="Slide", normalize.per.deposition=F, output.all=F)
-{   
+{ 
+  #check if supported method has been selected
+  if(!(method %in% c("singleHK", "medianLoading", "variableSlope"))){
+    cat("specify a method. Either singleHK or median loading if a list of slides is provided")
+    return(NA)
+  }
+  
+  #method for median normalization
+  sub.normalize <- function(slideA){
+    slideA$upper <- slideA$upper / median(slideA$concentrations, na.rm=T)
+    slideA$lower <- slideA$lower / median(slideA$concentrations, na.rm=T)
+    slideA$concentrations <- slideA$concentrations / median(slideA$concentrations, na.rm=T)
+    return(slideA)
+  }
+  
+  #first median normalization for target slide
+  if(normalize.with.median.first)
+  {
+    if(!normalize.per.deposition){
+      slideA <- sub.normalize(slideA)
+    }
+    else{
+      slideA <- ddply(slideA, .(Deposition), sub.normalize)
+    }
+  }
+  
+  #save target slides confidence intervals as percentage, so we can calculate them later
+  #based on corrected values (variable slope normalization)
+  slideA$upper <- (( slideA$upper - slideA$concentrations) /slideA$concentrations )
+  slideA$lower <- (( slideA$concentrations - slideA$lower) / slideA$concentrations )
+  
+  if(method%in% c("medianLoading", "variableSlope")){
+    #normalize with median
+    if(normalize.with.median.first)
+    {
+      if(!normalize.per.deposition){
+        slideB <- lapply(slideB, sub.normalize)
+      }
+      else{
+        slideB <- foreach(slide=slideB) %do% ddply(slide, .(Deposition), sub.normalize)
+      }
+    }
+    
+    #Firstly, we collect all necessary values and bind the columns (one column per slide)
+    allConcentrations <- foreach(slide=slideB, .combine=cbind) %do%{
+      return(slide$concentrations)
+    }
+    
+    #confidence intervals are kept as percentage of their concentration estimates, so
+    #we can reuse them after applying a correction factor.
+    allUpper <- foreach(slide=slideB, .combine=cbind) %do%{
+      return(( slide$upper - slide$concentrations) / slide$concentrations )
+    }
+    
+    allLower <- foreach(slide=slideB, .combine=cbind) %do%{
+      return((slide$concentrations - slide$lower) /slide$concentrations )
+    }
+  
+    #we choose to keep the first one for its layout properties and overwrite its title
+    slideB <- slideB[[1]]
+    attr(slideB, "antibody") <- "mixed"
+    attr(slideB, "title") <- method
+  }
+ 
+  if(method == "variableSlope")
+  {
+    #apply to all slides, including target slide
+    allSlideConcentrations <- cbind(slideA$concentrations, allConcentrations)
+    gammaB <- estimateGamma(allSlideConcentrations,method="other")
+    #exchanged '-' and '/' since we don't use log values
+    
+    mydata.gam <- sweep(allSlideConcentrations,2,gammaB,"/")
+    slideA$concentrations <- mydata.gam[,1]
+    allConcentrations <- mydata.gam[,-1]
+  }
+  if(method %in% c("medianLoading", "variableSlope"))
+  {
+    #in median loading normalization the median value of all housekeeping proteins is selected.
+    #variable slope normalization follows the same principle, but applies a correction factor gamma first.
+    
+    #which index is the median value selected for normalization. 
+    which.median = function(x) {
+      if (length(x) %% 2 != 0) {
+        which(x == median(x))
+      } else if (length(x) %% 2 == 0) {
+        a = sort(x)[c(length(x)/2, length(x)/2+1)]
+        c(which(x == a[1]), which(x == a[2]))
+      }
+    }
+    #take the median of each row
+    medians <- apply(allConcentrations, 1, which.median)
+    
+    #index of the median is needed for finding the 
+    #corresponding confidence intervals
+    for(i in 1:dim(medians)[2]){
+      slideB$concentrations[i] <- allConcentrations[medians[[i]][1]]
+      slideB$upper[i] <- allUpper[medians[[i]][1]] 
+      slideB$lower[i] <- allLower[medians[[i]][1]] 
+    }
+  }
+  
+  if(method == "singleHK"){
+    if(normalize.with.median.first)
+    {
+      if(!normalize.per.deposition){
+        slideB <- sub.normalize(slideB)
+      }
+      else{
+        slideB <- ddply(slideB, .(Deposition), sub.normalize)
+      }
+    }
+  }
+  
   #check if target column is free on both slides
   if(output.all && !is.null(slideA[[target.column]]))
   {
@@ -15,30 +127,12 @@ rppa.proteinConc.normalize <- function(slideA, slideB, normalize.with.median.fir
   slideA[[target.column]] <- attr(slideA, "title")
   slideB[[target.column]] <- attr(slideB, "title")
   
-  sub.normalize <- function(slideA){
-    slideA$upper <- slideA$upper / median(slideA$concentrations, na.rm=T)
-    slideA$lower <- slideA$lower / median(slideA$concentrations, na.rm=T)
-    slideA$concentrations <- slideA$concentrations / median(slideA$concentrations, na.rm=T)
-    return(slideA)
-  }
-  
-  if(normalize.with.median.first)
-  {
-    if(!normalize.per.deposition){
-      slideA <- sub.normalize(slideA)
-      slideB <- sub.normalize(slideB)
-    }
-    else{
-      slideA <- ddply(slideA, .(Deposition), sub.normalize)
-      slideB <- ddply(slideB, .(Deposition), sub.normalize)
-    }
-  }
-  
   result <- slideA
   result$concentrations <- slideA$concentrations / slideB$concentrations
-  #calculate percentage error, build sum and calculate real error on the new value.
-  result$upper <- ((( slideA$upper - slideA$concentrations) /slideA$concentrations ) + (( slideB$upper - slideB$concentrations) / slideB$concentrations )) * result$concentrations 
-  result$lower <- (( (slideA$concentrations - slideA$lower) / slideA$concentrations ) + ( (slideB$concentrations - slideB$lower) /slideB$concentrations )) * result$concentrations
+  
+  #combine error
+  result$upper <- (slideA$upper + slideB$upper) * result$concentrations 
+  result$lower <- (slideA$lower + slideB$lower) * result$concentrations
   
   result$upper <- result$upper + result$concentrations
   result$lower <- result$concentrations - result$lower
