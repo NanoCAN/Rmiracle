@@ -64,14 +64,19 @@ rppa.load <- function (connection=NULL, barcode=NA, slideIndex=NA, securityToken
   if(!is.na(securityToken)) spotsUrl <- paste(spotsUrl, "?securityToken=", securityToken, sep="")
   
   spots <- getURL(spotsUrl, curl=connection)
-  spots <- ldply(fromJSON(spots, simplify = T, nullValue = "NA"))
+  spots <- ldply(fromJSON(spots, simplify = T, nullValue = NA))
   cat(paste(dim(spots)[1], "spots read. Formatting...\n"))
-      
-  #replace "NA" with proper NA
-  replace.na <- colwise(function(col) { col[col=="NA"] <- NA; return(col) })
-  spots <- replace.na(spots)
+  
+  metaUrl <- paste(baseUrl, "exportMetaDataAsJSON/", slideIndex, sep = "")
+  if(!is.na(securityToken)) metaUrl <- paste(metaUrl, "?securityToken=", securityToken, sep="")
+  
+  meta <- getURL(metaUrl, curl=connection)
+  meta <- fromJSON(meta, simplify=T)
+  
+  colnames(spots) <- meta
   
   #reformat column types
+  spots$id <- as.integer(spots$id)
   spots$FG <- as.double(spots$FG)
   spots$BG <- as.double(spots$BG)
   spots$Signal <- as.double(spots$Signal)
