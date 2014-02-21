@@ -20,7 +20,7 @@ rppa.load <- function (connection=NULL, barcode=NA, slideIndex=NA, securityToken
     curlSetOpt(ssl.verifypeer=FALSE, timeout=60, cookiefile=tempfile(), cookiejar=tempfile(), useragent = agent, followlocation = TRUE, curl=connection, verbose=FALSE)
     
     #first check if security token is valid
-    isTokenValid <- scan(text=getURL(paste(baseUrl, "isSecurityTokenValid/", securityToken, sep = ""), curl=connection), what="boolean")
+    isTokenValid <- scan(text=capitalize(getURL(paste(baseUrl, "isSecurityTokenValid/", securityToken, sep = ""), curl=connection)), what=TRUE)
     if(isTokenValid) slideIndex <- scan(text=getURL(paste(baseUrl, "getSlideIdFromSecurityToken/", securityToken, sep = ""), curl=connection), what="integer")
     else{
       cat("Security token is invalid!\n")
