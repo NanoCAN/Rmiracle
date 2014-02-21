@@ -5,9 +5,8 @@ shinyUI(pageWithSidebar(
   sidebarPanel(
     checkboxInput("surface.correction", "Use positive control spots for surface correction?", value=FALSE),
     uiOutput("posControls"),
-    checkboxInput("applyNorm", "Apply normalization", value=TRUE),
     uiOutput("normSlides"),
-    selectInput("normalizationMethod", "Normalization Method (multiple slides):", choices = c("medianLoading", "variableSlope")),
+    selectInput("normalizationMethod", "Normalization Method:", choices = c("medianLoading", "variableSlope")),
     selectInput("method", "Quantification Method:",
                 choices = c("Serial Dilution Curve" , "SuperCurve", "Tabus", "Hu non-parametric")),
     selectInput("scales", "Should results be scaled?", choices = c("fixed", "free_y", "free_x", "free")),

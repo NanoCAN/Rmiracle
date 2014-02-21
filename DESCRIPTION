@@ -38,7 +38,6 @@ Suggests:
 Collate:
     'HuNonParam.R'
     'JSON.R'
-    'VSfunctions.R'
     'attributes.R'
     'batch.R'
     'blockShift.R'

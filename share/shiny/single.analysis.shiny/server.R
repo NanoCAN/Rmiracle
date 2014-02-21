@@ -128,43 +128,14 @@ shinyServer(function(input, output, session) {
            "SuperCurve" = rppa.superCurve(preProcessed(), select.columns.A=input$select.columns.A, select.columns.B=input$select.columns.B, select.columns.fill=input$select.columns.fill))
   })
   
-  quantifiedNormSlides <- reactive({
-    normSlides <- preProcessedNormalizationSlides()
-    foreach(slide=normSlides) %do%
-    {
-      test <- quantify(slide, input$method)
-      print(test)
-      return(test)
-    }
-  })
-  
-  quantify <- function(slide, method){
-    switch(method,
-           "Serial Dilution Curve" = rppa.serialDilution(slide, select.columns.A=input$select.columns.A, select.columns.B=input$select.columns.B, select.columns.fill=input$select.columns.fill),
-           "Tabus" = rppa.tabus(slide, select.columns.A=input$select.columns.A, select.columns.B=input$select.columns.B, select.columns.fill=input$select.columns.fill),
-           "Hu non-parametric" = rppa.nonparam(slide, select.columns.A=input$select.columns.A, select.columns.B=input$select.columns.B, select.columns.fill=input$select.columns.fill),
-           "SuperCurve" = rppa.superCurve(slide, select.columns.A=input$select.columns.A, select.columns.B=input$select.columns.B, select.columns.fill=input$select.columns.fill))    
-  }
-  
   normalized <- reactive({
-    quantNormSlides <- quantifiedNormSlides()
-    method <- input$normalizationMethod
-    if(length(quantNormSlides) == 1) method <- "singleHK"
-    else if(length(quantNormSlides) == 0) return(quantified())
-    rppa.proteinConc.normalize(quantified(), quantifiedNormSlides(), method=input$normalizationMethod)
-  })
-  
-  result <- reactive({
-    result <- quantified()
-    if(input$applyNorm) result <- normalized()
-    return(result)
+    rppa.proteinConc.normalize(preProcessed(), preProcessedNormalizationSlides(), method=input$normalizationMethod)
   })
   
   output$proteinConcPlot <- renderPlot({
     reference <- input$reference
-    if(reference == "") reference <- NA
-
-    rppa.proteinConc.plot(result(), title=title(), swap=input$swap, 
+    if(length(reference) == 0) reference <- NA
+    rppa.proteinConc.plot(quantified(), title=title(), swap=input$swap, 
       horizontal.line=input$horizontal.line, error.bars=input$error.bars, scales=input$scales, sample.subset=input$samples, reference=reference,
       each.A=T, each.B=T)
   })
@@ -172,8 +143,8 @@ shinyServer(function(input, output, session) {
   output$downloadData <- downloadHandler(
     filename = function() { paste(title(), input$method, '.csv', sep=' ')},
     content = function(file) {
-      if(input$csvType == "CSV") write.csv(result(), file)
-      else write.csv2(result(), file)
+      if(input$csvType == "CSV") write.csv(quantified(), file)
+      else write.csv2(quantified(), file)
    }
   )
 }) 
