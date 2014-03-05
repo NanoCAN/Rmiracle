@@ -1,5 +1,4 @@
-rppa.proteinConc.plot <-
-function(data.protein.conc, title="", swap=F, horizontal.line=T, error.bars=T, scales, sample.subset=NA, reference=NA, slideAsFill=F, ...){
+rppa.proteinConc.plot <- function(data.protein.conc, title="", swap=F, horizontal.line=T, fill.legend=T, error.bars=T, scales="free", sample.subset=NA, reference=NA, slideAsFill=F, ...){
   
   require(ggplot2)
   require(gridExtra) 
@@ -15,7 +14,7 @@ function(data.protein.conc, title="", swap=F, horizontal.line=T, error.bars=T, s
   if(!is.na(reference)){
     data.protein.conc <- rppa.normalize.to.ref.sample(data.protein.conc, reference,...)    
   }
-      
+  
   #plot protein concentrations  
   limits <- aes(ymax = upper, ymin= lower)
   dodge <- position_dodge(width=0.9)
@@ -27,10 +26,10 @@ function(data.protein.conc, title="", swap=F, horizontal.line=T, error.bars=T, s
   }
   
   else if(!is.null(data.protein.conc$Deposition)){  
-      data.protein.conc$Deposition <- as.factor(data.protein.conc$Deposition)
-      p <- qplot(Sample, concentrations, data=data.protein.conc, 
-                 main=title, stat="identity", 
-                 ylab="Estimated Protein Concentration (Relative Scale)",xlab="Sample", geom="bar", fill=Deposition, position="dodge")
+    data.protein.conc$Deposition <- as.factor(data.protein.conc$Deposition)
+    p <- qplot(Sample, concentrations, data=data.protein.conc, 
+               main=title, stat="identity", 
+               ylab="Estimated Protein Concentration (Relative Scale)",xlab="Sample", geom="bar", fill=Deposition, position="dodge")
   }
   else if(!is.null(data.protein.conc$Fill))
   {
@@ -38,12 +37,17 @@ function(data.protein.conc, title="", swap=F, horizontal.line=T, error.bars=T, s
     p <- qplot(Sample, concentrations, data=data.protein.conc, 
                main=title, stat="identity",
                ylab="Estimated Protein Concentration (Relative Scale)",xlab="Sample", geom="bar", fill=Fill, position="dodge")   
-    p <- p + guides(fill=guide_legend(title=NULL))
+    if(fill.legend){
+      p <- p + guides(fill=guide_legend(title=NULL))
+    }
+    else{
+      p <- p + guides(fill=FALSE)
+    }
   }
   else { 
-      p <- qplot(Sample, concentrations, data=data.protein.conc, 
-                 main=title, stat="identity",
-                 ylab="Estimated Protein Concentration (Relative Scale)",xlab="Sample", geom="bar")
+    p <- qplot(Sample, concentrations, data=data.protein.conc, 
+               main=title, stat="identity",
+               ylab="Estimated Protein Concentration (Relative Scale)",xlab="Sample", geom="bar")
   }
   
   if(!is.null(data.protein.conc$B) && !is.null(data.protein.conc$A)){

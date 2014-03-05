@@ -57,8 +57,11 @@ shinyServer(function(input, output, session) {
   
   output$normSlides <- renderUI({
     normSlides <- normalizationTitles()
-    print(normSlides)
+    if(length(normSlides==0)) {
+      normSlides=NA
+    }
     selectInput("selected.norm.slides", "Choose slides for normalization", normSlides, multiple=TRUE)
+    
   })
   
   output$posControls <- renderUI({
