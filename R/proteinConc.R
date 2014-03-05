@@ -48,7 +48,7 @@ rppa.proteinConc <-
         reference <- NA
       }
       
-      rppa.proteinConc.plot(data.protein.conc.copy, title, swap, horizontal.line, error.bars, scales.free, subset.sample, reference, isOverview, each.A, each.B, specific.A.copy, specific.B.copy)
+      rppa.proteinConc.plot(data.protein.conc.copy, title, swap, horizontal.line, fill.legend, error.bars, scales.free, subset.sample, reference, isOverview, each.A, each.B, specific.A.copy, specific.B.copy)
       
     }, swap = checkbox(FALSE, "Swap category orientation"),
                horizontal.line = checkbox(FALSE, "Draw horizontal line through 1"),
@@ -59,6 +59,7 @@ rppa.proteinConc <-
                normalize.each=picker( "A and B", "overall", "each A", "each B", "specify"),
                specific.A=picker(as.list(c(levels(data.protein.conc$A), NA))),
                specific.B=picker(as.list(c(levels(data.protein.conc$B), NA))),  
-               scales.free=picker("fixed", "free_y", "free_x", "free")      
+               scales.free=picker("fixed", "free_y", "free_x", "free"),
+               fill.legend=checkbox(TRUE, "Show fill legend")      
     )  
   }
