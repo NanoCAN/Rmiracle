@@ -1,5 +1,5 @@
 rppa.batch.sdc <- function(slideList, normalizeTo=NA, csv2=F, surface.normalization=T, plotHeatmaps=T, plotConcEstimates=T, saveDir=NA, positive.control="IgG 400",
-                           swap=F, horizontal.line=T, error.bars=T, scales="free", sample.subset=NA, reference=NA,...)
+                           swap=F, horizontal.line=T, fill.legend=T, error.bars=T, scales="free", sample.subset=NA, reference=NA,...)
 {
   #requirements
   require(foreach)
@@ -79,7 +79,7 @@ rppa.batch.sdc <- function(slideList, normalizeTo=NA, csv2=F, surface.normalizat
   #method for protein concentration plot
   proteinConc <- function(pConc, normalized){
     if(!is.na(saveDir)[1]) png(paste(attr(pConc, "title"), "- Protein Concentration Estimates", normalized, ".png"), width=1024, height=768)
-    rppa.proteinConc.plot(pConc, attr(pConc, "title"), swap, horizontal.line, error.bars, scales, sample.subset, reference)
+    rppa.proteinConc.plot(pConc, attr(pConc, "title"), swap, horizontal.line, fill.legend, error.bars, scales, sample.subset, reference)
     if(!is.na(saveDir)[1]) dev.off()
   }
   
