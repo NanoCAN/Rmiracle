@@ -8,11 +8,11 @@ rppa.proteinConc.normalize <- function(slideA, slideB, method="singleHK", normal
   }
   
   #method for median normalization
-  sub.normalize <- function(slideA){
-    slideA$upper <- slideA$upper / median(slideA$concentrations, na.rm=T)
-    slideA$lower <- slideA$lower / median(slideA$concentrations, na.rm=T)
-    slideA$concentrations <- slideA$concentrations / median(slideA$concentrations, na.rm=T)
-    return(slideA)
+  sub.normalize <- function(slide){
+    slide$upper <- slide$upper / median(slide$concentrations, na.rm=T)
+    slide$lower <- slide$lower / median(slide$concentrations, na.rm=T)
+    slide$concentrations <- slide$concentrations / median(slide$concentrations, na.rm=T)
+    return(slide)
   }
   
   #first median normalization for target slide
@@ -110,6 +110,9 @@ rppa.proteinConc.normalize <- function(slideA, slideB, method="singleHK", normal
       else{
         slideB <- ddply(slideB, .(Deposition), sub.normalize)
       }
+      #error is needed as percentage
+      slideB$upper <- (( slideB$upper - slideB$concentrations) /slideB$concentrations )
+      slideB$lower <- (( slideB$concentrations - slideB$lower) / slideB$concentrations )
     }
   }
   

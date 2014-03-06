@@ -22,6 +22,7 @@ rppa.proteinConc.overview <-
         specific.A.copy <- NULL
         specific.B.copy <- NULL
         each.fill <- T
+        fill.legend <- T
       
       if(duplicate.na)
       {
@@ -30,7 +31,7 @@ rppa.proteinConc.overview <-
       
       if(!normalize.to.ref.sample) reference <- NA
       
-      rppa.proteinConc.plot(data.protein.conc.copy, title, swap, horizontal.line, error.bars, scales.free, subset.sample, reference, slideAsFill=T, each.A, each.B, specific.A.copy, specific.B.copy, each.fill)
+      rppa.proteinConc.plot(data.protein.conc.copy, title, swap, horizontal.line, fill.legend, error.bars, scales.free, subset.sample, reference, slideAsFill=T, each.A, each.B, specific.A.copy, specific.B.copy, each.fill)
       
     }, swap = checkbox(FALSE, "Swap category orientation"),
                horizontal.line = checkbox(FALSE, "Draw horizontal line through 1"),
@@ -38,6 +39,6 @@ rppa.proteinConc.overview <-
                duplicate.na = checkbox(TRUE, "Duplicate NA values"),
                normalize.to.ref.sample=checkbox(FALSE, "Normalize to reference"),
                reference=picker(as.list(if(!is.na(subset.sample)[1]) subset.sample else c(levels(data.protein.conc$Sample), NA))),
-               scales.free=picker("fixed", "free_y", "free_x", "free")      
+               scales.free=picker("fixed", "free_y", "free_x", "free")
     )  
   }

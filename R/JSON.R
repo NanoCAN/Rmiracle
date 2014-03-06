@@ -96,6 +96,7 @@ rppa.load <- function (connection=NULL, barcode=NA, slideIndex=NA, securityToken
   spots$PlateCol <- as.integer(spots$PlateCol)
   spots$PlateRow <- as.integer(spots$PlateRow)
   spots$PlateLayout <- as.integer(spots$PlateLayout)
+  spots$Replicate <- as.integer(spots$Replicate)
   
   #add shifts
   shiftUrl <- paste(baseUrl, "exportShiftsAsJSON/", slideIndex, sep = "")
