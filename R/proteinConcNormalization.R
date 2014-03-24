@@ -1,11 +1,24 @@
-rppa.proteinConc.normalize <- function(slideA, slideB, method="singleHK", normalize.with.median.first = T, 
+rppa.proteinConc.normalize <- function(slideA, slideB, method="houseKeeping", normalize.with.median.first = T, 
                                        target.column="Slide", normalize.per.deposition=F, output.all=F)
 { 
+  #which index is the median value selected for normalization. 
+  which.median = function(x) {
+    if (length(x) %% 2 != 0) {
+      which(x == median(x))
+    } else if (length(x) %% 2 == 0) {
+      a = sort(x)[c(length(x)/2, length(x)/2+1)]
+      c(which(x == a[1]), which(x == a[2]))
+    }
+  }
+  
   #check if supported method has been selected
-  if(!(method %in% c("singleHK", "medianLoading", "variableSlope"))){
-    cat("specify a method. Either singleHK or median loading if a list of slides is provided")
+  if(!(method %in% c("houseKeeping", "medianLoading", "variableSlope"))){
+    cat("specify a method. Either houseKeeping or medianLoading/variableSlope if a list of slides is provided")
     return(NA)
   }
+  
+  if(is.data.frame(slideB)) slideB <- list(slideB)
+  numberOfSlidesInB = length(slideB)
   
   #method for median normalization
   sub.normalize <- function(slide){
@@ -31,35 +44,37 @@ rppa.proteinConc.normalize <- function(slideA, slideB, method="singleHK", normal
   slideA$upper <- (( slideA$upper - slideA$concentrations) /slideA$concentrations )
   slideA$lower <- (( slideA$concentrations - slideA$lower) / slideA$concentrations )
   
-  if(method%in% c("medianLoading", "variableSlope")){
-    #normalize with median
-    if(normalize.with.median.first)
-    {
-      if(!normalize.per.deposition){
-        slideB <- lapply(slideB, sub.normalize)
-      }
-      else{
-        slideB <- foreach(slide=slideB) %do% ddply(slide, .(Deposition), sub.normalize)
-      }
-    }
-    
-    #Firstly, we collect all necessary values and bind the columns (one column per slide)
-    allConcentrations <- foreach(slide=slideB, .combine=cbind) %do%{
-      return(slide$concentrations)
-    }
-    
-    #confidence intervals are kept as percentage of their concentration estimates, so
-    #we can reuse them after applying a correction factor.
-    allUpper <- foreach(slide=slideB, .combine=cbind) %do%{
-      return(( slide$upper - slide$concentrations) / slide$concentrations )
-    }
-    
-    allLower <- foreach(slide=slideB, .combine=cbind) %do%{
-      return((slide$concentrations - slide$lower) /slide$concentrations )
-    }
   
+  #normalize with median
+  if(normalize.with.median.first)
+  {
+    if(!normalize.per.deposition){
+      slideB <- lapply(slideB, sub.normalize)
+    }
+    else{
+      slideB <- foreach(slide=slideB) %do% ddply(slide, .(Deposition), sub.normalize)
+    }
+  }
+    
+  #Firstly, we collect all necessary values and bind the columns (one column per slide)
+  allConcentrations <- foreach(slide=slideB, .combine=cbind) %do%{
+    return(slide$concentrations)
+  }
+    
+  #confidence intervals are kept as percentage of their concentration estimates, so
+  #we can reuse them after applying a correction factor.
+  allUpper <- foreach(slide=slideB, .combine=cbind) %do%{
+    return(( slide$upper - slide$concentrations) / slide$concentrations )
+  }
+  
+  allLower <- foreach(slide=slideB, .combine=cbind) %do%{
+    return((slide$concentrations - slide$lower) /slide$concentrations )
+  }
+
+  slideB <- slideB[[1]]
+  if(numberOfSlidesInB > 1)
+  {
     #we choose to keep the first one for its layout properties and overwrite its title
-    slideB <- slideB[[1]]
     attr(slideB, "antibody") <- "mixed"
     attr(slideB, "title") <- method
   }
@@ -80,15 +95,6 @@ rppa.proteinConc.normalize <- function(slideA, slideB, method="singleHK", normal
     #in median loading normalization the median value of all housekeeping proteins is selected.
     #variable slope normalization follows the same principle, but applies a correction factor gamma first.
     
-    #which index is the median value selected for normalization. 
-    which.median = function(x) {
-      if (length(x) %% 2 != 0) {
-        which(x == median(x))
-      } else if (length(x) %% 2 == 0) {
-        a = sort(x)[c(length(x)/2, length(x)/2+1)]
-        c(which(x == a[1]), which(x == a[2]))
-      }
-    }
     #take the median of each row
     medians <- apply(allConcentrations, 1, which.median)
     
@@ -101,19 +107,10 @@ rppa.proteinConc.normalize <- function(slideA, slideB, method="singleHK", normal
     }
   }
   
-  if(method == "singleHK"){
-    if(normalize.with.median.first)
-    {
-      if(!normalize.per.deposition){
-        slideB <- sub.normalize(slideB)
-      }
-      else{
-        slideB <- ddply(slideB, .(Deposition), sub.normalize)
-      }
-      #error is needed as percentage
-      slideB$upper <- (( slideB$upper - slideB$concentrations) /slideB$concentrations )
-      slideB$lower <- (( slideB$concentrations - slideB$lower) / slideB$concentrations )
-    }
+  if(method == "houseKeeping" && numberOfSlidesInB > 1){
+    slideB$concentrations <- apply(allConcentrations, 1, mean)
+    slideB$upper <- apply(allUpper, 1, max)
+    slideB$lower <- apply(allLower, 1, min)
   }
   
   #check if target column is free on both slides
@@ -137,8 +134,8 @@ rppa.proteinConc.normalize <- function(slideA, slideB, method="singleHK", normal
   result$upper <- (slideA$upper + slideB$upper) * result$concentrations 
   result$lower <- (slideA$lower + slideB$lower) * result$concentrations
   
-  result$upper <- result$upper + result$concentrations
-  result$lower <- result$concentrations - result$lower
+  #result$upper <- result$upper + result$concentrations
+  #result$lower <- result$concentrations - result$lower
   result[[target.column]] <- paste(slideA[[target.column]], "normalized by", slideB[[target.column]])
   if(output.all) result <- rbind(slideA, result, slideB)
     

@@ -30,7 +30,7 @@ rppa.serialDilution.batch <- function(slideList)
   return(data.protein.conc)
 }
 
-rppa.serialDilution <- function(spots, initial.dilution.estimate=2, sensible.min=5, sensible.max=6e4, method="nls", compress.results=T, ...)
+rppa.serialDilution <- function(spots, initial.dilution.estimate=2, sensible.min=5, sensible.max=6e4, method="nls", compress.results=T, make.plot=T, ...)
 { 
   #get title
   slideTitle <- attr(spots, "title")
@@ -47,10 +47,13 @@ rppa.serialDilution <- function(spots, initial.dilution.estimate=2, sensible.min
   spots.m <- rppa.serialDilution.dilutionMatrix(spots.c, numOfDilutions)
   
   #compute the actual protein estimates using the serial dilution method
-  spots.e <- rppa.serialDilution.compute(spots.m, initial.dilution.estimate, sensible.min, sensible.max, method, slideTitle)
+  spots.e <- rppa.serialDilution.compute(spots.m, initial.dilution.estimate, sensible.min, sensible.max, method, slideTitle, make.plot)
   
   #fit 
   fit <- attr(spots.e, "fit")
+  fittedData <- attr(spots.e, "fittedData") 
+  pairedData <- attr(spots.e, "pairedData") 
+  estDilFactor <- attr(spots.e, "estimatedDilutionFactor") 
   
   #combine estimates with signal information
   spots.result <- cbind(spots.c[,1:(ncol(spots.c)-numOfDilutions)], spots.e)
@@ -75,6 +78,10 @@ rppa.serialDilution <- function(spots, initial.dilution.estimate=2, sensible.min
   attr(spots.summarize, "antibody") <- attr(spots, "antibody")
   
   attr(spots.summarize, "fit") <- fit
+  attr(spots.summarize, "fittedData") <- fittedData
+  attr(spots.summarize, "pairedData") <- pairedData
+  attr(spots.summarize, "estimatedDilutionFactor") <- estDilFactor
+  
   return(spots.summarize)
 }
 
@@ -192,6 +199,9 @@ rppa.serialDilution.compute <- function(spots.m, initial.dilution.estimate=2, se
   
   #add fit object
   attr(serialDilutionResult, "fit") <- fit
+  attr(serialDilutionResult, "fittedData") <- fittedData
+  attr(serialDilutionResult, "pairedData") <- pairedData
+  attr(serialDilutionResult, "estimatedDilutionFactor") <- round(D,2)
   
   return(serialDilutionResult)
 }

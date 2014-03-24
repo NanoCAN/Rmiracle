@@ -36,7 +36,10 @@ rppa.plot.heatmap <- function(spots, log=NA, fill="Signal", plotNA=T, palette=NA
   if(plotNA) 
   {
     p <- p + geom_tile(data=subset(spots, !is.na(Signal)), line=0, aes_string(fill = fill));
-    p <- p + geom_tile(data=subset(spots, is.na(Signal)), line=0, fill="black");
+    if(nrow(subset(spots,is.na(Signal)))!=0)
+    {
+      p <- p + geom_tile(data=subset(spots, is.na(Signal)), line=0, fill="black");
+    }
   }
   else {
     p <- p + geom_tile(data=spots, line=0, aes_string(fill = fill));
