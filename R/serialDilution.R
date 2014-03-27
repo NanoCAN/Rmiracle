@@ -92,18 +92,22 @@ rppa.serialDilution.format <- function(spots, useDepositionsInDilutionSeries=F) 
   
   #filter NA values
   spots <- spots[!is.na(spots$DilutionFactor),]
+  groupingCols <- setdiff(colnames(spots), c("Block", "id", "Row", "Column", "Signal", "DilutionFactor", "FG", "BG", "Flag", "Diameter", "Deposition", "SGADesc", "SGBDesc", "SGCDesc", "hshift", "vshift"))
   
   #cast into table
   if(useDepositionsInDilutionSeries)
   {
     spots$realDilutionFactor <- as.factor(as.numeric(spots$DilutionFactor) * as.numeric(spots$Deposition))
-    spots.c <- cast(spots, CellLine + NumberOfCellsSeeded + SampleName + SampleType + TargetGene + SpotType + SpotClass + Treatment + LysisBuffer + Inducer + Replicate ~ realDilutionFactor, value="Signal", add.missing=FALSE, fun.aggregate="median", na.rm=T)
+    groupingCols <- paste(groupingCols, collapse = " + ")
+    spots.c <- cast(spots,  as.formula(paste(groupingCols, "realDilutionFactor", sep=" ~ ")), value="Signal", add.missing=FALSE, fun.aggregate="median", na.rm=T)
     attr(spots.c, "numOfDilutions") <- length(levels(spots$realDilutionFactor))
   }
   else{
     #transform continuous into descrete
     spots$DilutionFactor <- as.factor(spots$DilutionFactor)
-    spots.c <- cast(spots, CellLine + NumberOfCellsSeeded + SampleName + SampleType + TargetGene + SpotType + SpotClass + Deposition + Treatment + LysisBuffer + Inducer + Replicate ~ DilutionFactor, value="Signal", add.missing=FALSE, fun.aggregate="median", na.rm=T)
+    groupingCols <- c(groupingCols, "Deposition")
+    groupingCols <- paste(groupingCols, collapse = " + ")
+    spots.c <- cast(spots, as.formula(paste(groupingCols, "DilutionFactor", sep=" ~ ")), value="Signal", add.missing=FALSE, fun.aggregate="median", na.rm=T)
     attr(spots.c, "numOfDilutions") <- length(levels(spots$DilutionFactor))
   }
   return(spots.c)

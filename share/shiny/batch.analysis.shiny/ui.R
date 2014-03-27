@@ -70,7 +70,12 @@ shinyUI(pageWithSidebar(
       tabPanel("Comparison", plotOutput("proteinConcOverviewPlot")),
       tabPanel("Correlation",     
           plotOutput("correlationPlot"),
-          plotOutput("rawCorrelationPlot"))
+          plotOutput("rawCorrelationPlot")),
+      tabPanel("Significance",
+          checkboxInput("sign.neg.ctrl.to.one", "Set reference (negative control) to 100%?", value=F),
+          uiOutput("selectSignificanceSlide"),                         
+          plotOutput("dunnettsPlot"),
+          downloadButton('downloadSignDiffData', 'Download'))
     )
     #plotOutput("proteinConcPlot", height=800)
   )

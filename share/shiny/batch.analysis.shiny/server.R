@@ -80,6 +80,11 @@ shinyServer(function(input, output, session) {
     selectInput("selectedSlideForProteinConcPlot", "Choose slides for protein concentration estimate plot", slides, slides[[1]])    
   })
   
+  output$selectSignificanceSlide <- renderUI({
+    slides <- slideTitles()
+    selectInput("selectedSlideForSignificancePlot", "Choose slides for testing significance", slides, slides[[1]])    
+  })
+  
   output$posControls <- renderUI({
     spots <- loadAllSlides()[[1]]
     selectInput("positive.control", "Choose a positive control", setdiff(unique(spots$SpotType), "Sample"))
@@ -93,12 +98,12 @@ shinyServer(function(input, output, session) {
 
   output$referenceSelect <- renderUI({
     spots <- loadAllSlides()[[1]]
-    selectInput("reference", "Choose reference sample", c(as.character(sort(unique(spots$SampleName)))))
+    selectInput("reference", "Choose reference sample (negative control)", c(as.character(sort(unique(spots$SampleName)))))
   })
 
   slideProperties <- function(){
     spots <- loadAllSlides()[[1]]
-    sort(setdiff(colnames(spots), c("vshift", "hshift", "Diameter", "Flag", "PlateLayout", "PlateRow", "PlateCol", "FG", "BG", "Signal", "Block", "Row", "Column")))
+    sort(setdiff(colnames(spots), c("vshift", "hshift", "Diameter", "Flag", "FG", "BG", "Signal", "Block", "Row", "Column", "SGADesc", "SGBDesc", "SGCDesc")))
   }
 
   output$selectA <- renderUI({
@@ -110,7 +115,7 @@ shinyServer(function(input, output, session) {
   })
 
   output$selectFill <- renderUI({
-    selectInput("select.columns.fill", "Choose color fill category", slideProperties())
+    selectInput("select.columns.fill", "Choose color fill categories (replicates)", slideProperties(), multiple=T)
   })
   
   ### PROCESSING ###
@@ -188,6 +193,12 @@ shinyServer(function(input, output, session) {
     else return(slides)
   })
   
+  selectedSlide <- reactive({
+    slides <- normalizedSlides()
+    if(is.null(input$selectedSlideForProteinConcPlot)) return(NULL)
+    slides[[input$selectedSlideForProteinConcPlot]]
+  })
+  
   pairwiseCorrelations <- reactive({
     slides <- normalizedSlides()
     concentrations <- foreach(slide=slides, .combine=cbind) %do% {
@@ -199,11 +210,34 @@ shinyServer(function(input, output, session) {
   
   pairwiseRawCorrelations <- reactive({
     slides <- loadAllSlides()
+    
     concentrations <- foreach(slide=slides, .combine=cbind) %do% {
       slide$Signal  
     } 
     colnames(concentrations) <- paste(slideTitles(), names(slideTitles()))
     cor(concentrations, use="pairwise.complete.obs")
+  })
+  
+  dunnettsTest <- reactive({
+    slides <- normalizedSlides()
+    if(is.null(input$selectedSlideForSignificancePlot)) return(NULL)
+    slide <- slides[[input$selectedSlideForSignificancePlot]]
+    if(is.null(slide)) return(NULL)
+    #check that we have enough replicates
+    if(is.null(slide$Fill)){
+      stop("You have to choose at least one column as color fill for testing significance, since this category is used to determine replicates(check 'Show sample options' first.)")
+    } else if(is.null(slide$A) && is.null(slide$B)){ checkResult <- ddply(slide, .(Sample), summarise, freq=length(Sample)) 
+    } else if(is.null(slide$A)){ checkResult <- ddply(slide, .(Sample, B), summarise, freq=length(Sample)) 
+    } else if(is.null(slide$B)){ checkResult <- ddply(slide, .(Sample, A), summarise, freq=length(Sample)) 
+    } else { checkResult <- ddply(slide[,c("Sample", "A", "B")], .(Sample, A, B), summarise, freq=length(Sample)) 
+    }
+    if(min(checkResult$freq) < 2) stop("Not enough replicates for all selected samples, try a different color fill category (used to determine replicates) or exclude samples with too few replicates.")
+    withProgress(session, min=1, max=5, {
+      setProgress(message = 'Performing Dunnett test',
+                  detail = 'a few seconds away...')
+      results <- rppa.dunnett(slide=slide, referenceSample=input$reference, sample.subset=input$samples)
+      return(results)
+    })   
   })
   
   ### TABLES ###
@@ -323,6 +357,12 @@ shinyServer(function(input, output, session) {
     rppa.plot.heatmap(loadAllSlides()[[input$slideSelectedForHeatmap]], log=input$heatmapLog, fill=input$heatmapFill, discreteColorA=input$discreteColorA,
                       discreteColorB=input$discreteColorB, plotNA=input$heatmapPlotNA, palette=input$heatmapPalette)
   })
+  
+  output$dunnettsPlot <- renderPlot({
+    testResult <- dunnettsTest()
+    if(is.null(testResult)) return(NULL)
+    else rppa.plot.dunnett(testResult, set.neg.control.to.one=input$sign.neg.ctrl.to.one)
+  })
 
   ### DATA OUTPUT ###
   output$downloadData <- downloadHandler(
@@ -333,11 +373,25 @@ shinyServer(function(input, output, session) {
    }
   )
   
-  selectedSlide <- reactive({
-    slides <- normalizedSlides()
-    if(is.null(input$selectedSlideForProteinConcPlot)) return(NULL)
-    slides[[input$selectedSlideForProteinConcPlot]]
-  })
+  output$downloadSignDiffData <- downloadHandler(    
+    filename = function() {
+      slide <- dunnettsTest()
+      file <- paste(attr(slide, "title"), input$method, "_significance", sep=' ')
+      switch(input$tableFileType,
+             "CSV" = paste(file, ".csv", sep=""),
+             "CSV2" = paste(file, ".csv", sep=""),
+             "TAB" = paste(file, ".txt", sep=""),
+             "XLSX" = paste(file, ".xlsx", sep=""))
+    },
+    content = function(file) {  
+      slide <- dunnettsTest()
+      switch(input$tableFileType,
+             "CSV" = write.csv(slide, file),
+             "CSV2" = write.csv2(slide, file),
+             "TAB" = write.table(slide, file, sep="\t", row.names=F, col.names=T, quote=F),
+             "XLSX" = write.xlsx(slide, file))
+    }
+  )
   
   output$downloadProteinConcData <- downloadHandler(    
     filename = function() {

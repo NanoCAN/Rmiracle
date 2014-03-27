@@ -34,42 +34,68 @@ rppa.plot.tukey <- function(pvalues, p.cutoff=1)
   print(q)
 }
 
-rppa.dunnett <- function(slide, referenceSample="OTC#3")
+rppa.dunnett <- function(slide, referenceSample="OTC#3", sample.subset=NULL)
 {
-  require(multcomp)
-  foreach(currentA = levels(slide$A), .combine=rbind) %do%{
-    foreach(currentB = levels(slide$B), .combine=rbind) %do%{
-      slide.subset <- subset(slide, A==currentA & B==currentB)
-      slide.subset$Sample <- relevel(slide.subset$Sample, ref=referenceSample)
+  if(!is.null(sample.subset))
+  slide <- subset(slide, Sample %in% sample.subset)
+  
+  levelsA = levels(slide$A)
+  if(is.null(levelsA)) levelsA <- list("NA")
+
+  levelsB = levels(slide$B)
+  if(is.null(levelsB)) levelsB <- list("NA")
+  
+  library(multcomp)
+  library(foreach)
+  foreach(currentA = levelsA, .combine=rbind) %do%{
+    foreach(currentB = levelsB, .combine=rbind) %do%{
+      if(currentA == "NA" && currentB == "NA") slide.subset <- slide
+      else if(currentA == "NA") slide.subset <- subset(slide, B==currentB)
+      else if(currentB == "NA") slide.subset <- subset(slide, A==currentA)
+      else slide.subset <- subset(slide, A==currentA & B==currentB)
+
+      #center data first
+      slide.subset$concentrations <- slide.subset$concentrations / mean(slide.subset$concentrations)
+      
+      slide.subset$Sample <- relevel(as.factor(as.character(slide.subset$Sample)), ref=referenceSample)
       slide.aov <- aov(concentrations ~ Sample, data=slide.subset)
+   
       dunnett.df <- with(summary(glht(slide.aov, linfct=mcp(Sample="Dunnett")))$test, 
                          {  data.frame(estimates=coefficients, stderror=sigma, pvalues=pvalues) } )
+      
       dunnett.df$Samples <- row.names(dunnett.df)
-      dunnett.df$A <- currentA
-      dunnett.df$B <- currentB
-      dunnett.df$slide <- slide$Slide[1]
+      if(!(currentA == "NA")) dunnett.df$A <- currentA
+      if(!(currentB == "NA")) dunnett.df$B <- currentB
+      if(!is.null(slide$Slide)) dunnett.df$slide <- slide$Slide[1]
       return(dunnett.df)
     }
   }
 }
 
-rppa.plot.dunnett <- function(pvalues, p.cutoff=1, title="Dunnett's test")
+rppa.plot.dunnett <- function(pvalues, p.cutoff=1, set.neg.control.to.one=F, title="Dunnett's test")
 {
   require(ggplot2)
   require(scales)
   
-  pvalues.subset <- subset(pvalues, pvalues <= p.cutoff)
+  pvalues.subset <- subset(pvalues, pvalues <= p.cutoff)  
+  
+  if(set.neg.control.to.one) pvalues.subset$estimates <- (pvalues.subset$estimates + 1)
+  
   pvalues.subset$symbol <- ""
+  pvalues.subset[pvalues.subset$pvalues < 0.05, "symbol"] <- "."
   pvalues.subset[pvalues.subset$pvalues < 0.01, "symbol"] <- "*"
   pvalues.subset[pvalues.subset$pvalues < 0.001, "symbol"] <- "**"
   pvalues.subset[pvalues.subset$pvalues < 0.0001, "symbol"] <- "***"
+  
+  breaks <- c(c(1, 0.1, 0.05, 0.01, 0.001), 10^(-(seq(6, 21, by=3))))
   limits <- aes(ymax = estimates + stderror, ymin = estimates - stderror)
   q <- qplot(x=Samples, y=estimates, data=pvalues.subset, main=title, fill=pvalues, ylab="estimated difference", geom="bar", stat="identity", label=symbol)
   q <- q + geom_errorbar(limits, position="dodge", width=0.25)
   q <- q + theme(axis.text.x = element_text(angle=-45, hjust=0, vjust=1))
-  #q <- q + scale_fill_gradient2(trans="log", low="red", guide="legend", mid="orange", high="yellow", breaks=10^(-(seq(-3, 12, by=3))))
-  q <- q + scale_fill_gradient2(low="red", trans="log10", mid="orange", high="yellow", breaks=10^(-(seq(0, 9, by=1))), labels=paste(10^(-(seq(0, 9, by=1))), c("", "", "*", "**", rep("***",6))))
-  q <- q + facet_grid(A ~ B)
+  q <- q + scale_fill_gradient2(low="red", trans="log", mid="orange", high="yellow", breaks=breaks, na.value="darkred", guide=guide_legend(keyheight=1), labels=paste(breaks, c("", "", ".", "*", "**", rep("***",6))))
+  if(!is.null(pvalues$A) && !is.null(pvalues$B)) q <- q + facet_grid(A ~ B)
+  else if(is.null(pvalues$A) && !is.null(pvalues$B)) q <- q + facet_grid(~B)
+  else if(is.null(pvalues$B) && !is.null(pvalues$A)) q <- q + facet_grid(~A)
   q <- q + geom_text(aes(y = estimates + stderror), vjust=0.1)
   q <- q + scale_y_continuous(labels = percent)
   print(q)
