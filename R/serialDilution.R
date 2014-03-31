@@ -92,7 +92,7 @@ rppa.serialDilution.format <- function(spots, useDepositionsInDilutionSeries=F) 
   
   #filter NA values
   spots <- spots[!is.na(spots$DilutionFactor),]
-  groupingCols <- setdiff(colnames(spots), c("Block", "id", "Row", "Column", "Signal", "DilutionFactor", "FG", "BG", "Flag", "Diameter", "Deposition", "SGADesc", "SGBDesc", "SGCDesc", "hshift", "vshift"))
+  groupingCols <- setdiff(colnames(spots), c("Block", "id", "Row", "Column", "Signal", "surface", "BlockRow", "BlockColumn", "DilutionFactor", "FG", "BG", "Flag", "Diameter", "Deposition", "SGADesc", "SGBDesc", "SGCDesc", "hshift", "vshift"))
   
   #cast into table
   if(useDepositionsInDilutionSeries)
