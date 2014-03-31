@@ -59,33 +59,26 @@ rppa.load <- function (connection=NULL, barcode=NA, slideIndex=NA, securityToken
   }
   
   #read the data from database
-  cat(paste("Reading spots for slide index", slideIndex, "\n"))
-  spotsUrl <- paste(baseUrl, "exportAsJSON/", slideIndex, sep = "")
-  if(!is.na(securityToken)) spotsUrl <- paste(spotsUrl, "?securityToken=", securityToken, sep="")
-  
-  spots <- getURL(spotsUrl, curl=connection)
-  spots <- ldply(fromJSON(spots, simplify = T, nullValue = NA))
-  cat(paste(dim(spots)[1], "spots read. Formatting...\n"))
-  
+ 
   metaUrl <- paste(baseUrl, "exportMetaDataAsJSON/", slideIndex, sep = "")
   if(!is.na(securityToken)) metaUrl <- paste(metaUrl, "?securityToken=", securityToken, sep="")
   
   meta <- getURL(metaUrl, curl=connection)
   meta <- fromJSON(meta, simplify=T)
+
+  colnames(spots) <- meta
   
   spots <- rppa.reformatColTypes(spots)
-  colnames(spots) <- meta
   
   #add shifts
   shiftUrl <- paste(baseUrl, "exportShiftsAsJSON/", slideIndex, sep = "")
   if(!is.na(securityToken)) shiftUrl <- paste(shiftUrl, "?securityToken=", securityToken, sep="")
   
   shifts <- getURL(shiftUrl, curl=connection)
-  if (length(fromJSON(shifts)) > 0) {
+  if(length(fromJSON(shifts)) > 0) {
     shifts <- ldply(fromJSON(shifts, simplify = T, nullValue = NA))
     spots <- merge(spots, shifts, by = "Block", all.x = T)
-  }
-  else{
+  } else{
     spots$vshift <- 0
     spots$hshift <- 0
   }
