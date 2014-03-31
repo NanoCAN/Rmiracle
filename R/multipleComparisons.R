@@ -39,14 +39,15 @@ rppa.dunnett <- function(slide, referenceSample="OTC#3", sample.subset=NULL)
   if(!is.null(sample.subset))
   slide <- subset(slide, Sample %in% sample.subset)
   
-  levelsA = levels(slide$A)
+  levelsA = levels(as.factor(as.character(slide$A)))
   if(is.null(levelsA)) levelsA <- list("NA")
 
-  levelsB = levels(slide$B)
+  levelsB = levels(as.factor(as.character(slide$B)))
   if(is.null(levelsB)) levelsB <- list("NA")
-  
+    
   library(multcomp)
   library(foreach)
+  
   foreach(currentA = levelsA, .combine=rbind) %do%{
     foreach(currentB = levelsB, .combine=rbind) %do%{
       if(currentA == "NA" && currentB == "NA") slide.subset <- slide
@@ -54,6 +55,9 @@ rppa.dunnett <- function(slide, referenceSample="OTC#3", sample.subset=NULL)
       else if(currentB == "NA") slide.subset <- subset(slide, A==currentA)
       else slide.subset <- subset(slide, A==currentA & B==currentB)
 
+      #check if ref exists
+      if(nrow(subset(slide.subset, Sample == referenceSample)) == 0) stop(paste("Reference sample could not be found in group", currentA, "/", currentB, ". Change grouping parameters or select a subset of samples."))
+      
       #center data first
       slide.subset$concentrations <- slide.subset$concentrations / mean(slide.subset$concentrations)
       
