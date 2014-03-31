@@ -1,4 +1,4 @@
-rppa.load <- function (connection=NULL, barcode=NA, slideIndex=NA, securityToken=NA, baseUrl = "http://localhost:8080/MIRACLE/spotExport/", filter.bad.signals=T, apply.shifts=T) 
+rppa.load <- function (connection=NULL, barcode=NA, slideIndex=NA, securityToken=NA, baseUrl = "http://localhost:8080/MIRACLE/spotExport/", filter.diameter=T, filter.neg.values=T, filter.flag=T, apply.shifts=T) 
 {
   require(RJSONIO)
   require(plyr)
@@ -73,30 +73,8 @@ rppa.load <- function (connection=NULL, barcode=NA, slideIndex=NA, securityToken
   meta <- getURL(metaUrl, curl=connection)
   meta <- fromJSON(meta, simplify=T)
   
+  spots <- rppa.reformatColTypes(spots)
   colnames(spots) <- meta
-  
-  #reformat column types
-  spots$id <- as.integer(spots$id)
-  spots$FG <- as.double(spots$FG)
-  spots$BG <- as.double(spots$BG)
-  spots$Signal <- as.double(spots$Signal)
-  spots$Diameter <- as.double(spots$Diameter)
-  spots$Flag <- as.double(spots$Flag)
-  spots$Block <- as.integer(spots$Block)
-  spots$Row <- as.integer(spots$Row)
-  spots$Column <- as.integer(spots$Column)
-  spots$CellLine <- as.factor(spots$CellLine)
-  spots$Treatment <- as.factor(spots$Treatment)
-  spots$Inducer <- as.factor(spots$Inducer)
-  spots$LysisBuffer <- as.factor(spots$LysisBuffer)
-  spots$SampleName <- as.factor(spots$SampleName)
-  spots$SampleType <- as.factor(spots$SampleType)
-  spots$TargetGene <- as.factor(spots$TargetGene)
-  spots$DilutionFactor <- as.double(spots$DilutionFactor)
-  spots$PlateCol <- as.integer(spots$PlateCol)
-  spots$PlateRow <- as.integer(spots$PlateRow)
-  spots$PlateLayout <- as.integer(spots$PlateLayout)
-  spots$Replicate <- as.integer(spots$Replicate)
   
   #add shifts
   shiftUrl <- paste(baseUrl, "exportShiftsAsJSON/", slideIndex, sep = "")
@@ -128,13 +106,11 @@ rppa.load <- function (connection=NULL, barcode=NA, slideIndex=NA, securityToken
   spots$Deposition[spots$Deposition == 0] <- length(depositionPattern)
   spots$Deposition <- depositionPattern[spots$Deposition]
   
-  #filter bad signals
-  if(filter.bad.signals)
-  {
-    spots <- rppa.filter.diameter(spots)
-    spots <- rppa.filter.flagged(spots)
-    spots <- rppa.filter.neg.values(spots)
-  }
+  #filter bad spots (set signal to NA)
+  if(filter.diameter) spots <- rppa.filter.diameter(spots)
+  if(filter.flag) spots <- rppa.filter.flagged(spots)
+  if(filter.neg.values) spots <- rppa.filter.neg.values(spots)
+  
   blocksUrl <- paste(baseUrl, "getBlocksPerRow/", slideIndex, sep = "")
   if(!is.na(securityToken)) blocksUrl <- paste(blocksUrl, "?securityToken=", securityToken, sep="")
   
@@ -153,27 +129,5 @@ rppa.load <- function (connection=NULL, barcode=NA, slideIndex=NA, securityToken
   spots <- rppa.set.antibody(spots, paste(scan(text=getURL(antibodyUrl, curl=connection), what = "character"), collapse=" "))
   attr(spots, "slideIndex") <- slideIndex
   cat("...everything done. returning data.")
-  return(spots)
-}
-
-rppa.filter.diameter <- function(spots)
-{
-  spots$Diameter <- as.double(spots$Diameter)
-  spots$Signal[spots$Diameter >= 250] <- NA
-  return(spots)
-}
-
-rppa.filter.neg.values <- function(spots)
-{
-  spots$FG <- as.double(spots$FG)
-  spots$BG <- as.double(spots$BG)
-  spots$Signal[(spots$FG-spots$BG <= 0)] <- NA
-  return(spots)
-}
-
-rppa.filter.flagged <- function(spots)
-{
-  spots$Flag <- as.double(spots$Flag)
-  spots$Signal[spots$Flag != 0] <- NA
   return(spots)
 }

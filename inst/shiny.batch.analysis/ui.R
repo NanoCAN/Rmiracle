@@ -4,7 +4,10 @@ library(shinyIncubator)
 shinyUI(pageWithSidebar(
   headerPanel("Rmiracle"),
   sidebarPanel(    
-    uiOutput("slides"),
+    conditionalPanel("output.fileUpload",
+      fileInput("files", "File data", multiple=TRUE)
+    ),    
+    uiOutput("slidesAvailable"),
     checkboxInput("surfaceCorrection", "Use positive control spots correcting staining bias?", FALSE),
     conditionalPanel(condition= "input.surfaceCorrection",
       uiOutput("posControls")

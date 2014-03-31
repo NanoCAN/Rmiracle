@@ -22,7 +22,8 @@ Depends:
     msm,
     doBy,
     foreach,
-    gam ,ggplot2,
+    gam,
+    ggplot2,
     gridExtra,
     limma,
     mgcv,
@@ -33,6 +34,8 @@ Depends:
     scales,
     cobs
 Suggests:
+    shiny,
+    shinyIncubator,
     SuperCurve,
     manipulate
 Collate:
@@ -65,3 +68,5 @@ Collate:
     'tabus.R'
     'variableSlopeNormalization.R'
     'authenticate.R'
+    'startShinyApps.R'
+    'rppa.import.R'

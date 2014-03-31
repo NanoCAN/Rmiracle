@@ -27,7 +27,8 @@ shinyServer(function(input, output, session) {
     query <- parseQueryString(session$clientData$url_search)
     if(length(query$baseUrl > 0)) baseUrl <- query$baseUrl
     else baseUrl <- "http://localhost:8080/MIRACLE/spotExport/"
-    slideTokens <- str_split(query$slideSecurityTokens, "\\|")[[1]]
+    if(length(query$slideSecurityTokens)> 0) slideTokens <- str_split(query$slideSecurityTokens, "\\|")[[1]]
+    else return(NULL)
     
     withProgress(session, min=1, max=(length(slideTokens)+1), expr={
       slides <- list()
@@ -45,11 +46,43 @@ shinyServer(function(input, output, session) {
     })
   })
   
+  files <- reactive({
+    if(is.null(input$files)) {
+      # User has not uploaded a file yet
+      return(NULL)
+    }  
+    inFile <- input$files
+    return(inFile$datapath)
+  })
+  
+  loadFiles <- function(files){
+    listOfSlides <- list()
+    
+    for(file in files){
+      currentSlide <- rppa.loadFromFile(file)
+      listOfSlides[[attr(currentSlide, "slideIndex")]] <- currentSlide
+    }  
+    return(listOfSlides)    
+  }
+  
+  slides <- reactive({
+    if(is.null(loadAllSlides())){
+      if(is.null(files())) return(NULL)
+      else{
+        return(loadFiles(files()))
+      }
+    }
+    else{
+      return(loadAllSlides())
+    }
+  })
+  
   slideTitles <- function(){
-    slides <- loadAllSlides()
+    all.slides <- slides()
+    if(is.null(all.slides)) return(NULL)
     titles <- c()
     slideIndices <- c()
-    for(slide in slides){
+    for(slide in all.slides){
       title <- attr(slide, "antibody")
       slideIndex <- attr(slide, "slideIndex")
       titles <- append(titles, title)
@@ -60,49 +93,62 @@ shinyServer(function(input, output, session) {
   }
   
   ### INPUT ELEMENTS ###
-  output$slides <- renderUI({
-    slides <- slideTitles()
-    selectInput("selected.slides", "Choose slides", slides, slides, multiple=TRUE)    
+  output$slidesAvailable <- renderUI({
+    all.slides <- slideTitles()
+    if(is.null(all.slides)) return(NULL)
+    else selectInput("selected.slides", "Choose slides", all.slides, all.slides, multiple=TRUE)    
   })
   
+  output$fileUpload <- reactive({
+    return(is.null(slides()))
+  })
+  outputOptions(output, 'fileUpload', suspendWhenHidden=FALSE)
+  
   output$HKslides <- renderUI({
-    slides <- slideTitles()
-    selectInput("selected.hk.slide", "Choose slides for housekeeping normalization", slides, slides[[1]], multiple=TRUE)    
+    all.slides <- slideTitles()
+    if(is.null(all.slides)) return(NULL)
+    else selectInput("selected.hk.slide", "Choose slides for housekeeping normalization", all.slides, all.slides[[1]], multiple=TRUE)    
   })
   
   output$selectHeatmapSlide <- renderUI({
-    slides <- slideTitles()
-    selectInput("slideSelectedForHeatmap", "Choose slide for heatmap", slides, slides[[1]])    
+    all.slides <- slideTitles()
+    if(is.null(all.slides)) return(NULL)
+    else selectInput("slideSelectedForHeatmap", "Choose slide for heatmap", all.slides, all.slides[[1]])    
   })
   
   output$selectProteinConcSlide <- renderUI({
-    slides <- slideTitles()
-    selectInput("selectedSlideForProteinConcPlot", "Choose slides for protein concentration estimate plot", slides, slides[[1]])    
+    all.slides <- slideTitles()
+    if(is.null(all.slides)) return(NULL)
+    else selectInput("selectedSlideForProteinConcPlot", "Choose slides for protein concentration estimate plot", all.slides, all.slides[[1]])    
   })
   
   output$selectSignificanceSlide <- renderUI({
-    slides <- slideTitles()
-    selectInput("selectedSlideForSignificancePlot", "Choose slides for testing significance", slides, slides[[1]])    
+    all.slides <- slideTitles()
+    if(is.null(all.slides)) return(NULL)
+    else selectInput("selectedSlideForSignificancePlot", "Choose slides for testing significance", all.slides, all.slides[[1]])    
   })
   
   output$posControls <- renderUI({
-    spots <- loadAllSlides()[[1]]
+    spots <- slides()[[1]]
+    if(is.null(spots)) return(NULL)
     selectInput("positive.control", "Choose a positive control", setdiff(unique(spots$SpotType), "Sample"))
   })
 
   output$sampleSelect <- renderUI({
-    spots <- loadAllSlides()[[1]]
+    spots <- slides()[[1]]
+    if(is.null(spots)) return(NULL)
     sampleNames <- c(NA, as.character(sort(unique(spots$SampleName))))
     selectInput("samples", "Choose samples to include", sampleNames , selected=sampleNames, multiple=TRUE)
   })
 
   output$referenceSelect <- renderUI({
-    spots <- loadAllSlides()[[1]]
+    spots <- slides()[[1]]
+    if(is.null(spots)) return(NULL)
     selectInput("reference", "Choose reference sample (negative control)", c(as.character(sort(unique(spots$SampleName)))))
   })
 
   slideProperties <- function(){
-    spots <- loadAllSlides()[[1]]
+    spots <- slides()[[1]]
     sort(setdiff(colnames(spots), c("vshift", "hshift", "Diameter", "Flag", "FG", "BG", "Signal", "Block", "Row", "Column", "SGADesc", "SGBDesc", "SGCDesc")))
   }
 
@@ -141,10 +187,10 @@ shinyServer(function(input, output, session) {
   }
   
   processedSlides <- reactive({
-    slides <- loadAllSlides()
+    all.slides <- slides()
     counter <- 1
     
-    withProgress(session, min=1, max=length(slides)*2, {
+    withProgress(session, min=1, max=length(all.slides)*2, {
       setProgress(message = 'Calculation in progress',
                   detail = 'This may take a while...')
       
@@ -163,26 +209,26 @@ shinyServer(function(input, output, session) {
         return(slide)
       }
       
-      lapply(slides, processEachSlide) 
+      lapply(all.slides, processEachSlide) 
     })
   })
 
   normalizedSlides <- reactive({    
-    slides <- processedSlides()
+    all.slides <- processedSlides()
     if(input$proteinLoadNormalization)
     {
       if(input$normalizationMethod == "houseKeeping"){
         if(is.null(input$selected.hk.slide)) return(NULL)
-        slidesForNormalization <- subset(slides, names(slides)%in%input$selected.hk.slide)
+        slidesForNormalization <- subset(all.slides, names(all.slides)%in%input$selected.hk.slide)
       }
-      else slidesForNormalization <- slides
+      else slidesForNormalization <- all.slides
       
       counter <- 1
       
-      withProgress(session, min=1, max=length(slides), {
+      withProgress(session, min=1, max=length(all.slides), {
         setProgress(message = 'Calculation in progress',
                     detail = 'This may take a while...')
-        lapply(slides, function(slide){
+        lapply(all.slides, function(slide){
           setProgress(value = counter, detail=paste("Normalizing slide", attr(slide, "slideIndex")))
           slide <- rppa.proteinConc.normalize(slide, slidesForNormalization, method=input$normalizationMethod)
           counter <- counter + 1
@@ -190,18 +236,18 @@ shinyServer(function(input, output, session) {
         })
       })
     }
-    else return(slides)
+    else return(all.slides)
   })
   
   selectedSlide <- reactive({
-    slides <- normalizedSlides()
+    all.slides <- normalizedSlides()
     if(is.null(input$selectedSlideForProteinConcPlot)) return(NULL)
-    slides[[input$selectedSlideForProteinConcPlot]]
+    all.slides[[input$selectedSlideForProteinConcPlot]]
   })
   
   pairwiseCorrelations <- reactive({
-    slides <- normalizedSlides()
-    concentrations <- foreach(slide=slides, .combine=cbind) %do% {
+    all.slides <- normalizedSlides()
+    concentrations <- foreach(slide=all.slides, .combine=cbind) %do% {
       slide$concentrations  
     } 
     colnames(concentrations) <- paste(slideTitles(), names(slideTitles()))
@@ -209,9 +255,9 @@ shinyServer(function(input, output, session) {
   })
   
   pairwiseRawCorrelations <- reactive({
-    slides <- loadAllSlides()
+    all.slides <- slides()
     
-    concentrations <- foreach(slide=slides, .combine=cbind) %do% {
+    concentrations <- foreach(slide=all.slides, .combine=cbind) %do% {
       slide$Signal  
     } 
     colnames(concentrations) <- paste(slideTitles(), names(slideTitles()))
@@ -219,9 +265,9 @@ shinyServer(function(input, output, session) {
   })
   
   dunnettsTest <- reactive({
-    slides <- normalizedSlides()
+    all.slides <- normalizedSlides()
     if(is.null(input$selectedSlideForSignificancePlot)) return(NULL)
-    slide <- slides[[input$selectedSlideForSignificancePlot]]
+    slide <- all.slides[[input$selectedSlideForSignificancePlot]]
     if(is.null(slide)) return(NULL)
     #check that we have enough replicates
     if(is.null(slide$Fill)){
@@ -243,9 +289,9 @@ shinyServer(function(input, output, session) {
   ### TABLES ###
 
   output$proteinConcTable <- renderDataTable({
-    slides <- normalizedSlides()
+    all.slides <- normalizedSlides()
     if(is.null(input$selectedSlideForProteinConcPlot)) return(NULL)
-    slides[[input$selectedSlideForProteinConcPlot]]
+    all.slides[[input$selectedSlideForProteinConcPlot]]
   })
   
   ### PLOTS ###
@@ -260,21 +306,24 @@ shinyServer(function(input, output, session) {
   }
   
   output$correlationPlot <- renderPlot({
+    if(is.null(slides())) stop("No slides loaded")
     correlations <- pairwiseCorrelations()
     melted.correlations <- melt(correlations)
     print(correlationsPlot(melted.correlations, "Pearson correlation of protein concentration estimates"))
   })
   
   output$rawCorrelationPlot <- renderPlot({
+    if(is.null(slides())) stop("No slides loaded")
     correlations <- pairwiseRawCorrelations()
     melted.correlations <- melt(correlations)
     print(correlationsPlot(melted.correlations, "Pearson correlation of raw signal"))
   })
   
   output$quantificationFitPlot <- renderPlot({
-    slides <- normalizedSlides()
+    if(is.null(slides())) stop("No slides loaded")
+    all.slides <- normalizedSlides()
     if(is.null(input$selectedSlideForProteinConcPlot)) return(NULL)
-    slide <- slides[[input$selectedSlideForProteinConcPlot]]    
+    slide <- all.slides[[input$selectedSlideForProteinConcPlot]]    
     
     if(input$method == "sdc"){
       
@@ -291,26 +340,26 @@ shinyServer(function(input, output, session) {
   })
   
   output$proteinConcPlot <- renderPlot({
-    slides <- normalizedSlides()
+    if(is.null(slides())) stop("No slides loaded")
+    all.slides <- normalizedSlides()
     if(is.null(input$selectedSlideForProteinConcPlot)) return(NULL)
-    slide <- slides[[input$selectedSlideForProteinConcPlot]]
+    slide <- all.slides[[input$selectedSlideForProteinConcPlot]]
     reference <- input$reference
     if(is.null(reference)) reference <- NA
     
     samples <- input$samples
-    if(is.null(samples)) return(NULL)
+    if(is.null(samples)) samples <- levels(slide$Sample)
+    
     rppa.proteinConc.plot(slide, title=attr(slide, "title"), swap=input$swap, 
                           horizontal.line=input$horizontal.line, error.bars=input$error.bars, scales=input$scales,
                           sample.subset=samples, reference=reference)
-    #rppa.proteinConc.plot(slide, title=attr(slide, "title"), swap=input$swap, 
-    #  horizontal.line=input$horizontal.line, error.bars=input$error.bars, scales=input$scales, sample.subset=samples, reference=reference,
-    #  each.A=T, each.B=T)
   })
   
   output$proteinConcOverviewPlot <- renderPlot({
-    slides <- normalizedSlides()
+    if(is.null(slides())) stop("No slides loaded")
+    all.slides <- normalizedSlides()
     #slides <- lapply(slides, function(x){ x$Slide <- attr(x, "antibody"); return(x)})
-    data.protein.conc <- ldply(slides)
+    data.protein.conc <- ldply(all.slides)
     data.protein.conc$Slide <- apply(data.protein.conc, 1, function(x){
       paste(x[1], ":", names(slideTitles()[slideTitles()==x[1]]), sep="")
     })
@@ -319,7 +368,7 @@ shinyServer(function(input, output, session) {
     if(is.null(reference)) reference <- NA
     
     samples <- input$samples
-    if(is.null(samples)) return(NULL)
+    if(is.null(samples)) samples <- levels(slide$Sample)
     
     data.protein.conc.copy <- data.protein.conc
     
@@ -353,8 +402,10 @@ shinyServer(function(input, output, session) {
   
   #create the heatmap plot
   output$heatmapPlot <- renderPlot({  
+    if(is.null(slides())) stop("No slides loaded")
     if(is.null(input$slideSelectedForHeatmap)) return(NULL)
-    rppa.plot.heatmap(loadAllSlides()[[input$slideSelectedForHeatmap]], log=input$heatmapLog, fill=input$heatmapFill, discreteColorA=input$discreteColorA,
+    
+    rppa.plot.heatmap(slides()[[input$slideSelectedForHeatmap]], log=input$heatmapLog, fill=input$heatmapFill, discreteColorA=input$discreteColorA,
                       discreteColorB=input$discreteColorB, plotNA=input$heatmapPlotNA, palette=input$heatmapPalette)
   })
   
