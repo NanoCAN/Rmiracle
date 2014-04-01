@@ -1,4 +1,4 @@
-rppa.vshift.vector <-  function (v, by) 
+rppa.shift.vector <-  function (v, by) 
 {
   if (by == 0) return(v)
   
@@ -7,35 +7,21 @@ rppa.vshift.vector <-  function (v, by)
   else return(c(v[(-by + 1):(length(v) - by)]))
 }
 
-rppa.hshift <- function(spots)
+rppa.hshift <- function(spots, blocks=NA, cols=NA, by=NA)
 {
   if(!is.null(attr(spots, "hshifted")))
   {
-    cat("This slide has already been vshifted! Do you really want to continue? (yes/no)")
+    cat("This slide has already been hshifted! Do you really want to continue? (yes/no)")
     answer <- readline()
   
     if(answer != "yes") return()
   }
-  
-  range <- min(spots$Block): max(spots$Block)
-  
-  for(b in range)
-  {
-    blockB <- subset(spots, Block == b)
-    
-    spots[spots$Block==b,] <- unsplit(
-      lapply(split(blockB, blockB$Row), function(x)
-      {
-        by <- unique(x$hshift)
-        x <- x[with(x, order(Column)),]
-        x$Signal <- rppa.vshift.vector(x$Signal, by)
-        x$FG <- rppa.vshift.vector(x$FG, by)
-        x$BG <- rppa.vshift.vector(x$BG, by)
-        x$Flag <- rppa.vshift.vector(x$Flag, by)
-        x$Diameter <- rppa.vshift.vector(x$Diameter, by)
-        return(x)
-      }), blockB$Row)
+  if(is.na(by) && sum(spots$hshift) == 0){
+    message("nothing to do")
+    return(spots)
   }
+  
+  spots <- rppa.shift(spots, blocks, cols, by, "h") 
   
   attr(spots, "hshifted") <- TRUE
   
@@ -52,38 +38,55 @@ rppa.vshift <- function(spots, blocks=NA, rows=NA, by=NA)
     if(answer != "yes") return()
   }
   
+  if(is.na(by) && sum(spots$vshift) == 0){
+    message("nothing to do")
+    return(spots)
+  }
+  spots <- rppa.shift(spots, blocks, rows, by, "v") 
+
+  attr(spots, "vshifted") <- TRUE
+  return(spots)
+}
+
+rppa.shift <- function(spots, blocks, selected.subset, by, direction="v"){
   if(is.na(blocks[1])) range <- min(spots$Block):max(spots$Block)
   else range <- blocks
   
   for(b in range)
   {
     blockB <- subset(spots, Block==b);
+    
+    if(direction == "v")
+    {
+      splitVar <- "Column"
+      if(!is.na(by)) by <- by
+      else if(sum(blockB$vshift) == 0) next  
+      else by <- blockB$vshift[1]
+    } else if(direction == "h"){
+      splitVar <- "Row"
+      if(!is.na(by)) by <- by
+      else if(sum(blockB$hshift) == 0) next
+      else by <- blockB$hshift[1]
+    }
+    else stop("direction can only be h for horizontal or v for vertical")
+    
+    if(by > 0){
+      spots[spots$Block==b,] <- unsplit(
+        lapply(split(blockB, blockB[,splitVar]), function(x, selected.subset, by)
+        {
+          if(direction=="v") x <- x[with(x, order(Row)),]  
+          else if(direction=="h") x <- x[with(x, order(Column)),]  
           
-    spots[spots$Block==b,] <- unsplit(
-      lapply(split(blockB, blockB$Column), function(x, rows, by)
-      {
-        if(is.na(by))
-          by <- unique(x$vshift)
-        
-        x <- x[with(x, order(Row)),]  
-        
-        if(is.na(rows[1])){
-          x$Signal <- rppa.vshift.vector(x$Signal, by)
-          x$FG <- rppa.vshift.vector(x$FG, by)
-          x$BG <- rppa.vshift.vector(x$BG, by)
-          x$Flag <- rppa.vshift.vector(x$Flag, by)
-          x$Diameter <- rppa.vshift.vector(x$Diameter, by)
-        }
-        
-        else{
-          for(field in c("Signal", "FG", "BG"))
-            x[rows,field] <-  rppa.vshift.vector(x[rows, field], by) 
-        }
-        
-        return(x);
-      }, rows=rows, by=by)  
-      , blockB$Column)
+          for(field in c("Signal", "FG", "BG", "Flag", "Diameter")){         
+            if(!is.na(selected.subset)) x[selected.subset,field] <-  rppa.shift.vector(x[selected.subset, field], by)       
+            else x[,field] <-  rppa.shift.vector(x[, field], by)       
+          }
+              
+          
+          return(x);
+        }, selected.subset=selected.subset, by=by)  
+        , blockB[,splitVar])
+    }
   }
-  attr(spots, "vshifted") <- TRUE
   return(spots)
 }

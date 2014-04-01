@@ -89,8 +89,10 @@ rppa.load <- function (connection=NULL, barcode=NA, slideIndex=NA, securityToken
     spots$hshift <- 0
   }
   #apply shifts
-  spots <- rppa.vshift(spots)
-  spots <- rppa.hshift(spots)
+  if(apply.shifts){
+    spots <- rppa.vshift(spots)
+    spots <- rppa.hshift(spots)
+  }
   
   #add depositions
   deposUrl <- paste(baseUrl, "getDepositionPattern/", slideIndex, sep = "")
