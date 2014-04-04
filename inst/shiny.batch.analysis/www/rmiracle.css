@@ -1,0 +1,12 @@
+.btn{
+background-color: #70b8ff;
+background-image: -moz-linear-gradient(top,#fff,#70b8ff);
+background-image: -webkit-gradient(linear,0 0,0 100%,from(#fff),to(#e6e6e6));
+background-image: -webkit-linear-gradient(top,#fff,#70b8ff);
+background-image: -o-linear-gradient(top,#fff,#70b8ff);
+background-image: linear-gradient(to bottom,#fff,#70b8ff);
+}
+
+.btn:hover{
+	background-position: 0 0px;
+}

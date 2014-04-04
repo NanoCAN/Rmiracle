@@ -97,20 +97,37 @@ rppa.proteinConc.normalize <- function(slideA, slideB, method="houseKeeping", no
     
     #take the median of each row
     medians <- apply(allConcentrations, 1, which.median)
+    print(medians)
     
     #index of the median is needed for finding the 
     #corresponding confidence intervals
-    for(i in 1:dim(medians)[2]){
-      slideB$concentrations[i] <- allConcentrations[medians[[i]][1]]
-      slideB$upper[i] <- allUpper[medians[[i]][1]] 
-      slideB$lower[i] <- allLower[medians[[i]][1]] 
+    for(i in 1:length(medians)){
+      slideB$concentrations[i] <- allConcentrations[i, medians[i]]
+      slideB$upper[i] <- allUpper[i, medians[i]] 
+      slideB$lower[i] <- allLower[i, medians[i]] 
     }
+  }
+  
+  poolError <- function(errorRates){
+    apply(errorRates, 1, function(x){
+      return(sqrt(sum(sapply(x, function(y){return(y*y)}))) / length(x))
+    })
+  }
+  
+  poolDivisionError <- function(errorRates){
+    apply(errorRates, 1, function(x){
+      return(sqrt(sum(sapply(x, function(y){return(y*y)}))))
+    })
   }
   
   if(method == "houseKeeping" && numberOfSlidesInB > 1){
     slideB$concentrations <- apply(allConcentrations, 1, mean)
-    slideB$upper <- apply(allUpper, 1, max)
-    slideB$lower <- apply(allLower, 1, min)
+    slideB$upper <- poolError(allUpper)
+    slideB$lower <- poolError(allLower)
+  }
+  else if(method == "houseKeeping"){
+    slideB$upper <- allUpper
+    slideB$lower <- allLower
   }
   
   #check if target column is free on both slides
@@ -130,12 +147,16 @@ rppa.proteinConc.normalize <- function(slideA, slideB, method="houseKeeping", no
   result <- slideA
   result$concentrations <- slideA$concentrations / slideB$concentrations
   
+  print(head(slideA))
+  print(head(slideB))
+  print(head(result))
   #combine error
-  result$upper <- (slideA$upper + slideB$upper) * result$concentrations 
-  result$lower <- (slideA$lower + slideB$lower) * result$concentrations
+  result$upper <- poolDivisionError(cbind(slideA$upper,slideB$upper)) 
+  result$lower <- poolDivisionError(cbind(slideA$lower,slideB$lower))
   
-  #result$upper <- result$upper + result$concentrations
-  #result$lower <- result$concentrations - result$lower
+  result$upper <- (result$upper * result$concentrations) + result$concentrations
+  result$lower <- result$concentrations - (result$lower * result$concentrations)
+  
   result[[target.column]] <- paste(slideA[[target.column]], "normalized by", slideB[[target.column]])
   if(output.all) result <- rbind(slideA, result, slideB)
     
@@ -217,7 +238,7 @@ rppa.normalize.to.ref.sample <- function(data.protein.conc, sampleReference, eac
   }
   if(each.fill)
   {
-    data.protein.conc <- ddply(data.protein.conc, .(A, B, Slide), function(x, sampleRef){ 
+    data.protein.conc <- ddply(data.protein.conc, intersect(colnames(data.protein.conc), c("A", "B", "Slide", "Fill")), function(x, sampleRef){ 
           within(x, {
               reference <- concentrations[Sample==sampleRef]
               concentrations <- concentrations / reference
@@ -225,6 +246,7 @@ rppa.normalize.to.ref.sample <- function(data.protein.conc, sampleReference, eac
               lower <- lower / reference
            })
     }, sampleRef=sampleReference)
+    data.protein.conc <- data.protein.conc[,setdiff(colnames(data.protein.conc), c(".id", "reference"))]
   }
   
   else if(each.A && each.B){  

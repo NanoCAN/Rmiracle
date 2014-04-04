@@ -31,19 +31,48 @@ shinyServer(function(input, output, session) {
     else return(NULL)
     
     withProgress(session, min=1, max=(length(slideTokens)+1), expr={
+      setProgress(message = 'Fetching readout data from MIRACLE...',
+                  detail = 'Please be patient!',
+                  value=0)
+      readouts <- loadAllReadouts()
       slides <- list()
       count <- 1
       for(token in slideTokens)
       {
-        setProgress(message = 'Fetching data from MIRACLE...',
+        setProgress(message = 'Fetching slide data from MIRACLE...',
                   detail = 'Please be patient!',
                   value=count)
         currentSlide <- getSlide(baseUrl, token)
+        
+        newSlide <- currentSlide
+        if(!is.null(readouts)){
+          newSlide <- merge(currentSlide, readouts[,c("PlateLayout", "PlateRow", "PlateCol", "PlateReadout")], all.x=T, by=c("PlateLayout", "PlateRow", "PlateCol"))
+          #attributes(newSlide) <- attributes(currentSlide)
+          attr(newSlide, "antibody") <- attr(currentSlide, "antibody")
+          attr(newSlide, "slideIndex") <- attr(currentSlide, "slideIndex")
+          attr(newSlide, "title") <- attr(currentSlide, "title")
+          attr(newSlide, "blocksPerRow") <- attr(currentSlide, "blocksPerRow")
+          #colnames(newSlide)[length(colnames(newSlide))] <- "PlateReadout"
+        } 
+        if(nrow(currentSlide) != nrow(newSlide)) stop("Could not match readout data. Too many matches")
+        else{
+          currentSlide <- newSlide
+        } 
         slides[[attr(currentSlide, "slideIndex")]] <- currentSlide
         count <- count + 1
       }
       return(slides)
     })
+  })
+  
+  loadAllReadouts <- reactive({  
+    query <- parseQueryString(session$clientData$url_search)
+    if(length(query$baseUrl > 0)) baseUrl <- query$baseUrl
+    else baseUrl <- "http://localhost:8080/MIRACLE/readoutExport/"
+    if(length(query$plateSecurityTokens)> 0) plateTokens <- str_split(query$plateSecurityTokens, "\\|")[[1]]
+    else return(NULL)
+
+    rppa.batch.load.readouts(plateSecurityTokens=plateTokens)
   })
   
   files <- reactive({
@@ -107,25 +136,25 @@ shinyServer(function(input, output, session) {
   output$HKslides <- renderUI({
     all.slides <- slideTitles()
     if(is.null(all.slides)) return(NULL)
-    else selectInput("selected.hk.slide", "Choose slides for housekeeping normalization", all.slides, all.slides[[1]], multiple=TRUE)    
+    else selectInput("selected.hk.slide", "Choose slides for housekeeping normalization", all.slides[as.integer(input$selected.slides)], multiple=TRUE)    
   })
   
   output$selectHeatmapSlide <- renderUI({
     all.slides <- slideTitles()
     if(is.null(all.slides)) return(NULL)
-    else selectInput("slideSelectedForHeatmap", "Choose slide for heatmap", all.slides, all.slides[[1]])    
+    else selectInput("slideSelectedForHeatmap", "Choose slide for heatmap", all.slides[as.integer(input$selected.slides)])    
   })
   
   output$selectProteinConcSlide <- renderUI({
     all.slides <- slideTitles()
     if(is.null(all.slides)) return(NULL)
-    else selectInput("selectedSlideForProteinConcPlot", "Choose slides for protein concentration estimate plot", all.slides, all.slides[[1]])    
+    else selectInput("selectedSlideForProteinConcPlot", "Choose slides for protein concentration estimate plot", all.slides[as.integer(input$selected.slides)])    
   })
   
   output$selectSignificanceSlide <- renderUI({
     all.slides <- slideTitles()
     if(is.null(all.slides)) return(NULL)
-    else selectInput("selectedSlideForSignificancePlot", "Choose slides for testing significance", all.slides, all.slides[[1]])    
+    else selectInput("selectedSlideForSignificancePlot", "Choose slides for testing significance", all.slides[as.integer(input$selected.slides)])    
   })
   
   output$posControls <- renderUI({
@@ -164,6 +193,10 @@ shinyServer(function(input, output, session) {
     selectInput("select.columns.fill", "Choose color fill categories (replicates)", slideProperties(), multiple=T)
   })
   
+  output$heatmapOptions <- renderUI({
+    selectInput("heatmapFill", "Select a property", c(slideProperties(), "Signal", "FG", "BG") , "Signal")
+  })
+  
   ### PROCESSING ###
   
   quantify <- function(slide){
@@ -182,39 +215,48 @@ shinyServer(function(input, output, session) {
     switch(input$method,
            "sdc" = rppa.serialDilution(slide, select.columns.A=selA, select.columns.B=selB, select.columns.fill=selFill, make.plot=F),
            "tabus" = rppa.tabus(slide, select.columns.A=selA, select.columns.B=selB, select.columns.fill=selFill),
-           "hu" = rppa.nonparam(slide, , select.columns.A=selA, select.columns.B=selB, select.columns.fill=selFill),
-           "supercurve" = rppa.superCurve(slide, , select.columns.A=selA, select.columns.B=selB, select.columns.fill=selFill))
+           "hu" = rppa.nonparam(slide, select.columns.A=selA, select.columns.B=selB, select.columns.fill=selFill),
+           "supercurve" = rppa.superCurve(slide, method=input$superCurve.method, model=input$superCurve.model, make.plot=F, verbose=F, select.columns.A=selA, select.columns.B=selB, select.columns.fill=selFill))
   }
   
   processedSlides <- reactive({
-    all.slides <- slides()
-    counter <- 1
     
-    withProgress(session, min=1, max=length(all.slides)*2, {
-      setProgress(message = 'Calculation in progress',
-                  detail = 'This may take a while...')
+      all.slides <- slides()
+      all.slides <- all.slides[as.integer(input$selected.slides)]
+    
+      withProgress(session, min=0, max=length(all.slides), {
+        counter <- 0
+        setProgress(message = 'Calculation in progress',
+                    detail = 'This may take a while...', value=counter)
       
-      processEachSlide <- function(slide){
-        if(input$surfaceCorrection)
-        {
-          setProgress(value = counter, detail=paste("Applying surface correction to slide", attr(slide, "slideIndex")))
-          slide <- rppa.surface.normalization(slide, input$positive.control)
+        processEachSlide <- function(slide, counter){
+          if(input$surfaceCorrection)
+          {
+            setProgress(value = counter, detail=paste("Applying surface correction to slide", attr(slide, "slideIndex")))
+            slide <- rppa.surface.normalization(slide, input$positive.control)
+          }
+          
+          if(input$quantification)
+          {
+            setProgress(value = counter, detail=paste("Quantifying slide", attr(slide, "slideIndex")))                          
+            slide <- quantify(slide) 
+          }
+          
+          return(slide)
         }
-        counter <- counter + 1
-        if(input$quantification)
-        {
-          setProgress(value = counter, detail=paste("Quantifying slide", attr(slide, "slideIndex")))                          
-          slide <- quantify(slide) 
+        
+        result <- foreach(slide=all.slides) %do% {
+          counter <- counter + 1
+          processEachSlide(slide, counter)
         }
-        return(slide)
-      }
-      
-      lapply(all.slides, processEachSlide) 
-    })
+        names(result) <- names(all.slides)
+        return(result)
+      })
   })
-
-  normalizedSlides <- reactive({    
+  
+  normalizedSlides <- reactive({ 
     all.slides <- processedSlides()
+  
     if(input$proteinLoadNormalization)
     {
       if(input$normalizationMethod == "houseKeeping"){
@@ -239,18 +281,58 @@ shinyServer(function(input, output, session) {
     else return(all.slides)
   })
   
-  selectedSlide <- reactive({
+  formattedSlides <- reactive({
+    input$updateButton
     all.slides <- normalizedSlides()
+    
+    isolate({
+      formatEachSlide <- function(slide){
+        if(!is.null(input$samples)){
+          slide.readout <- attr(slide, "readout")
+          slide.readout.centered <- attr(slide, "readout.centered")
+          slide.readout <- slide.readout[slide[,"Sample"] %in% input$samples,]
+          slide.readout.centered <- slide.readout.centered[slide[,"Sample"] %in% input$samples,]
+          
+          slide$Sample <- as.character(slide$Sample)
+          slide <- slide[slide[,"Sample"] %in% input$samples,]
+          attr(slide, "readout") <- slide.readout
+          attr(slide, "readout.centered") <- slide.readout.centered
+          slide$Sample <- as.factor(slide$Sample)
+        }
+        
+        if(!is.null(input$reference) && input$normalize.to.ref.sample){
+          
+          slideNorm <- rppa.normalize.to.ref.sample(slide, input$reference,each.fill=T)
+          slide$concentrations <- slideNorm$concentrations
+          slide$upper <- slideNorm$upper
+          slide$lower <- slideNorm$lower
+        }
+        
+        return(slide)
+      }    
+      lapply(all.slides, formatEachSlide) 
+    })  
+  })
+  
+  
+  selectedSlide <- reactive({
+    all.slides <- formattedSlides()
     if(is.null(input$selectedSlideForProteinConcPlot)) return(NULL)
     all.slides[[input$selectedSlideForProteinConcPlot]]
   })
   
   pairwiseCorrelations <- reactive({
-    all.slides <- normalizedSlides()
+    all.slides <- formattedSlides()
+    
     concentrations <- foreach(slide=all.slides, .combine=cbind) %do% {
       slide$concentrations  
     } 
     colnames(concentrations) <- paste(slideTitles(), names(slideTitles()))
+    
+    if(input$includeReadoutInCorrelation){
+      readout <- attr(all.slides[[1]], "readout")
+      concentrations <- cbind(concentrations, PlateReadout=readout[,"concentrations"])
+    } 
     cor(concentrations, use="pairwise.complete.obs")
   })
   
@@ -265,23 +347,23 @@ shinyServer(function(input, output, session) {
   })
   
   dunnettsTest <- reactive({
-    all.slides <- normalizedSlides()
+    all.slides <- formattedSlides()
     if(is.null(input$selectedSlideForSignificancePlot)) return(NULL)
     slide <- all.slides[[input$selectedSlideForSignificancePlot]]
     if(is.null(slide)) return(NULL)
     #check that we have enough replicates
     if(is.null(slide$Fill)){
       stop("You have to choose at least one column as color fill for testing significance, since this category is used to determine replicates(check 'Show sample options' first.)")
-    } else if(is.null(slide$A) && is.null(slide$B)){ checkResult <- ddply(slide, .(Sample), summarise, freq=length(Sample)) 
-    } else if(is.null(slide$A)){ checkResult <- ddply(slide, .(Sample, B), summarise, freq=length(Sample)) 
-    } else if(is.null(slide$B)){ checkResult <- ddply(slide, .(Sample, A), summarise, freq=length(Sample)) 
+    } else if(is.null(slide$A) && is.null(slide$B)){ checkResult <- count(slide$Sample) 
+    } else if(is.null(slide$A)){ checkResult <- ddply(slide[,c("Sample", "B")], .(Sample, B), summarise, freq=length(Sample)) 
+    } else if(is.null(slide$B)){ checkResult <- ddply(slide[,c("Sample", "A")], .(Sample, A), summarise, freq=length(Sample)) 
     } else { checkResult <- ddply(slide[,c("Sample", "A", "B")], .(Sample, A, B), summarise, freq=length(Sample)) 
     }
     if(min(checkResult$freq) < 2) stop("Not enough replicates for all selected samples, try a different color fill category (used to determine replicates) or exclude samples with too few replicates.")
     withProgress(session, min=1, max=5, {
       setProgress(message = 'Performing Dunnett test',
                   detail = 'a few seconds away...')
-      results <- rppa.dunnett(slide=slide, referenceSample=input$reference, sample.subset=input$samples)
+      results <- rppa.dunnett(slide=slide, referenceSample=input$reference)
       return(results)
     })   
   })
@@ -289,16 +371,20 @@ shinyServer(function(input, output, session) {
   ### TABLES ###
 
   output$proteinConcTable <- renderDataTable({
-    all.slides <- normalizedSlides()
+    all.slides <- formattedSlides()
     if(is.null(input$selectedSlideForProteinConcPlot)) return(NULL)
     all.slides[[input$selectedSlideForProteinConcPlot]]
+  })
+  
+  output$signDiffTable <- renderDataTable({
+    dunnettsTest()  
   })
   
   ### PLOTS ###
   correlationsPlot <- function(melted.correlations, title){
     p <- qplot(x=X1, y=X2, data=melted.correlations, xlab="", ylab="", fill=value, main=title)
     p <- p + geom_tile(aes(fill = melted.correlations$value, line = 0))
-    p <- p + geom_text(aes(fill = melted.correlations$value, label = round(melted.correlations$value, 2)))
+    p <- p + geom_text(aes(fill = melted.correlations$value, label = round(melted.correlations$value, 2)), colour="white")
     p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
                    panel.margin = unit(0.1, "lines"), panel.margin = unit(0, "lines"), plot.margin = unit(c(1, 1, 0.5, 0.5), "lines"),
                    plot.title = element_text(size = 18), strip.background = element_rect(fill = "grey90", colour = "grey50"))
@@ -321,7 +407,7 @@ shinyServer(function(input, output, session) {
   
   output$quantificationFitPlot <- renderPlot({
     if(is.null(slides())) stop("No slides loaded")
-    all.slides <- normalizedSlides()
+    all.slides <- formattedSlides()
     if(is.null(input$selectedSlideForProteinConcPlot)) return(NULL)
     slide <- all.slides[[input$selectedSlideForProteinConcPlot]]    
     
@@ -336,67 +422,75 @@ shinyServer(function(input, output, session) {
       
       print(multiplot(plotA, plotB, cols=1))
     }
+    else if(input$method == "supercurve"){
+      par(mfrow(c(2,1)))
+      new.fit <- attr(slide, "fit")
+      plot(new.fit)
+      image(new.fit)
+      par(mfrow(c(1,1)))
+    }
     
   })
   
+  useReadoutAsFill <- function(result){  
+    if(!is.null(result$B)){ 
+      result$B <- paste(result$B, result$Fill, sep="|")
+    } else result$B <- result$Fill
+    result$B <- as.factor(result$B)
+    readout <- result[,intersect(colnames(result), c("Sample", "A", "B"))]
+    readout.data <- attr(result, "readout.centered")
+    result <- cbind(readout, (result[,c("concentrations", "upper", "lower")] / mean(result$concentrations, na.rm=T)))
+    readout <- cbind(readout, readout.data)
+    result$Fill <- "Protein Conc. Est."
+    readout$Fill <- "Plate Readout"
+
+    result <- rbind(result, readout)
+    if(input$normalize.to.ref.sample) result <- rppa.normalize.to.ref.sample(result, sampleReference=input$reference, each.fill=T)
+      
+    return(result)
+  }
+  
   output$proteinConcPlot <- renderPlot({
     if(is.null(slides())) stop("No slides loaded")
-    all.slides <- normalizedSlides()
+    all.slides <- formattedSlides()
     if(is.null(input$selectedSlideForProteinConcPlot)) return(NULL)
     slide <- all.slides[[input$selectedSlideForProteinConcPlot]]
-    reference <- input$reference
-    if(is.null(reference)) reference <- NA
     
-    samples <- input$samples
-    if(is.null(samples)) samples <- levels(slide$Sample)
+    if(input$compareToReadoutData) slide <- useReadoutAsFill(slide)
     
     rppa.proteinConc.plot(slide, title=attr(slide, "title"), swap=input$swap, 
-                          horizontal.line=input$horizontal.line, error.bars=input$error.bars, scales=input$scales,
-                          sample.subset=samples, reference=reference)
+                          horizontal.line=input$horizontal.line, error.bars=input$error.bars, scales=input$scales)
   })
   
   output$proteinConcOverviewPlot <- renderPlot({
     if(is.null(slides())) stop("No slides loaded")
-    all.slides <- normalizedSlides()
-    #slides <- lapply(slides, function(x){ x$Slide <- attr(x, "antibody"); return(x)})
+    all.slides <- formattedSlides()
     data.protein.conc <- ldply(all.slides)
     data.protein.conc$Slide <- apply(data.protein.conc, 1, function(x){
       paste(x[1], ":", names(slideTitles()[slideTitles()==x[1]]), sep="")
     })
+    
+    if(input$includeReadoutInComparison){
+      anySlide <- all.slides[[1]]
+      readout <- cbind(anySlide[,intersect(colnames(anySlide),c("Sample", "A", "B", "Fill"))], 
+                     attr(anySlide, "readout.centered"))
+      if(input$normalize.to.ref.sample)
+      {
+        readout <- rppa.normalize.to.ref.sample(readout, sampleReference=input$reference, each.fill=T)
+        readout <- readout[, setdiff(colnames(readout), c(".id", "reference"))]
+      }
 
-    reference <- input$reference
-    if(is.null(reference)) reference <- NA
-    
-    samples <- input$samples
-    if(is.null(samples)) samples <- levels(slide$Sample)
-    
-    data.protein.conc.copy <- data.protein.conc
-    
-    normalizeFill <- function(data.protein.conc){
-      ddply(data.protein.conc, intersect(colnames(data.protein.conc), c("Fill", "A", "B")), transform, 
-            concentrations = concentrations / mean(concentrations, na.rm=T),
-            upper = upper / mean(concentrations, na.rm=T),
-            lower = lower / mean(concentrations, na.rm=T)) 
+      readout$Slide <- "Plate Readout"
+      data.protein.conc <- rbind(data.protein.conc[,-1], readout)      
     }
     
-    data.protein.conc.copy <- ddply(normalizeFill(data.protein.conc), intersect(colnames(data.protein.conc), c("Sample", "Slide", "A", "B")), summarise,
+    data.protein.conc.copy <- ddply(data.protein.conc, intersect(colnames(data.protein.conc), c("Sample", "Slide", "A", "B")), summarise,
                                     concentrations = mean(concentrations, na.rm=T),
                                     upper = max(upper, na.rm=T),
                                     lower = min(lower, na.rm=T)) 
-    each.A <- F
-    each.B <- F
-    specific.A.copy <- NULL
-    specific.B.copy <- NULL
-    each.fill <- T
-    fill.legend <- T
-    
-    #if(duplicate.na)
-    #{
-      #data.protein.conc.copy <- rppa.duplicate.nas(data.protein.conc.copy)
-    #}    
-    #rppa.proteinConc.plot(data.protein.conc.copy, slideAsFill=T)
+
     rppa.proteinConc.plot(data.protein.conc.copy, "Protein Concentration Estimate Comparison", input$swap, input$horizontal.line, 
-                          input$fill.legend, input$error.bars, input$scales, samples, reference, slideAsFill=T)
+                          input$fill.legend, input$error.bars, input$scales, slideAsFill=T)
     
   })
   

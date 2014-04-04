@@ -1,5 +1,8 @@
 rppa.nonparam <- function(spots, nrep=1, ...){
-  require(cobs)
+  library(cobs)
+  
+  spots$Signal <- spots$FG-spots$BG #method can't deal with NA values
+  spots$Signal[spots$Signal < 0] <- 0 
   
   spots <- subset(spots, SpotClass=="Sample")
   
@@ -11,19 +14,16 @@ rppa.nonparam <- function(spots, nrep=1, ...){
   
   #calculate matrix of dilutions
   spots.m <- rppa.serialDilution.dilutionMatrix(spots.c, numOfDilutions, highestDilutionFirst=F)
-  
-  #noise correction
-  #spots.m <- rppa.noiseCorrection(spots.m,highestDilutionFirst=F, subtractNoiseFromAll=T)
-  
-  nonpa <- getnonpest(spots.m,3)
+
+  nonpa <- getnonpest(spots.m,nrep)
   
   #combine estimates with signal information
   spots.result <- cbind(spots.c[,1:(ncol(spots.c)-numOfDilutions)], x.weighted.mean=nonpa$x0new, x.err=NA)
   
-  spots.summarize <- rppa.serialDilution.summarize(spots.result, useDeposition=F,...)
+  spots.summarize <- rppa.serialDilution.summarize(spots.result,...)
   spots.summarize$concentrations <- 2^spots.summarize$x.weighted.mean
-  spots.summarize$upper <- 0
-  spots.summarize$lower <- 0
+  spots.summarize$upper <- spots.summarize$concentrations
+  spots.summarize$lower <- spots.summarize$concentrations
   
   spots.summarize <- spots.summarize[,!(colnames(spots.summarize) %in% c("x.weighted.mean", "x.err"))]
   attr(spots.summarize, "title") <- attr(spots, "title")

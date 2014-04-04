@@ -3,7 +3,11 @@ library(shinyIncubator)
 
 shinyUI(pageWithSidebar(
   headerPanel("Rmiracle"),
-  sidebarPanel(    
+  sidebarPanel(
+    tags$head( 
+      tags$link(rel="stylesheet", type="text/css", 
+                href="rmiracle.css") 
+    ),
     conditionalPanel("output.fileUpload",
       fileInput("files", "File data", multiple=TRUE)
     ),    
@@ -16,6 +20,11 @@ shinyUI(pageWithSidebar(
     conditionalPanel(condition = "input.quantification",   
       selectInput("method", "Quantification Method:",
                 choices = c("Serial Dilution Curve"="sdc", "SuperCurve"="supercurve", "Tabus"="tabus", "Non-parametric"="hu"))),
+      conditionalPanel(condition="input.method=='supercurve'",
+                strong("Warning: Computation with this method can be time intensive or fail, probably due to convergence issues with few dilution steps."),
+      selectInput("superCurve.method", "Select a fit method", c("nls", "nlrob", "nlrq"), "nlrq"),
+      selectInput("superCurve.model", "Select a response curve model", c("logistic", "loess", "cobs"), "cobs")),
+      conditionalPanel(condition="input.method=='hu'", strong("Warning: Computation with this method is time intensive")),
     checkboxInput("proteinLoadNormalization", "Normalize for total protein amount?", FALSE),
     conditionalPanel(condition= "input.proteinLoadNormalization",
                      selectInput("normalizationMethod", "Normalization Method:", choices = c("House keeping proteins"="houseKeeping", "Median Loading"="medianLoading", "Variable Slope"="variableSlope")),
@@ -24,10 +33,13 @@ shinyUI(pageWithSidebar(
     ),
     checkboxInput("groupingOptions", "Show sample options?", FALSE),
     conditionalPanel(condition = "input.groupingOptions",
+                     actionButton("updateButton", "Update settings"),
+                     br(),br(),
                      uiOutput("sampleSelect"),
+                     checkboxInput("normalize.to.ref.sample", "Normalize to reference sample?", value=FALSE),              
                      uiOutput("referenceSelect"),
-                     uiOutput("selectA"),
                      uiOutput("selectB"),
+                     uiOutput("selectA"),
                      uiOutput("selectFill")),
     checkboxInput("plottingOptions", "Show plotting options?", FALSE),
     conditionalPanel(condition = "input.plottingOptions",
@@ -35,8 +47,7 @@ shinyUI(pageWithSidebar(
       checkboxInput("swap", "Swap categories?", value=FALSE),
       checkboxInput("horizontal.line", "Draw a horizontal line through 1", value=FALSE),
       checkboxInput("error.bars", "Include error bars", value=TRUE)),
-    #submitButton("update plot"),
-      selectInput("tableFileType", "Select file type for table downloads", choices=c("CSV", "CSV2", "TAB", "XLSX"), selected="TAB")
+      selectInput("tableFileType", "Select file type for table downloads", choices=c("CSV", "CSV2", "TAB"), selected="TAB")
   ),
   mainPanel(
     progressInit(),
@@ -49,13 +60,12 @@ shinyUI(pageWithSidebar(
                            column(3,
                                   selectInput("heatmapLog", "log-transformation?", 
                                               choices = c("none", "log2", "log10")),
-                                  selectInput("heatmapFill", "Select a property", 
-                                              choices = c("Signal", "FG", "BG","Deposition", "CellLine", "LysisBuffer", "DilutionFactor", "Inducer", "SpotType", "SpotClass", "SampleName", "SampleType", "TargetGene")),
+                                  uiOutput("heatmapOptions"),
                                   checkboxInput("heatmapPlotNA", "Mark excluded spots", value=TRUE)
                            ), 
                            column(3, offset = 1,
-                                  selectInput("heatmapPalette", "Select color palette for categorical variables", choices=c(NA, "Set1", "Set2", "Set3", 
-                                                "Accent", "Dark2", "Paired", "Pastel1", "Pastel2"), selected=NA),
+                                  selectInput("heatmapPalette", "Select color palette for categorical variables", choices=c("Set1", "Set2", "Set3", 
+                                                "Accent", "Dark2", "Paired", "Pastel1", "Pastel2"), selected="Set1"),
                                   selectInput("discreteColorA", "Select color A", 
                                               choices = c("darkblue", "red", "blue", "steelblue", "magenta", "yellow", "white", "green")),
                                   selectInput("discreteColorB", "Select color B", c("red", "darkblue", "blue", "steelblue", "magenta", "yellow", "white", "green"))
@@ -65,21 +75,25 @@ shinyUI(pageWithSidebar(
         plotOutput("heatmapPlot",height=800)
       ),
       tabPanel("Protein Concentration Estimates",
-               uiOutput("selectProteinConcSlide"),          
+               uiOutput("selectProteinConcSlide"),
+               checkboxInput("compareToReadoutData", "Compare to readout data?", value=FALSE),
                plotOutput("proteinConcPlot"),
                dataTableOutput("proteinConcTable"), 
                downloadButton('downloadProteinConcData', 'Download'),
                plotOutput("quantificationFitPlot")),
-      tabPanel("Comparison", plotOutput("proteinConcOverviewPlot")),
+      tabPanel("Comparison", 
+          checkboxInput("includeReadoutInComparison", "Include readout data?", value=FALSE),     
+          plotOutput("proteinConcOverviewPlot")),
       tabPanel("Correlation",     
+          checkboxInput("includeReadoutInCorrelation", "Include readout in correlation?", value=FALSE),                    
           plotOutput("correlationPlot"),
           plotOutput("rawCorrelationPlot")),
       tabPanel("Significance",
           checkboxInput("sign.neg.ctrl.to.one", "Set reference (negative control) to 100%?", value=F),
           uiOutput("selectSignificanceSlide"),                         
           plotOutput("dunnettsPlot"),
+          dataTableOutput("signDiffTable"), 
           downloadButton('downloadSignDiffData', 'Download'))
     )
-    #plotOutput("proteinConcPlot", height=800)
   )
 ))

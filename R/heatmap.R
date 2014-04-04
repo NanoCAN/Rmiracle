@@ -1,12 +1,12 @@
-rppa.plot.heatmap <- function(spots, log=NA, fill="Signal", plotNA=T, palette=NA, 
+rppa.plot.heatmap <- function(spots, log=NA, fill="Signal", plotNA=T, palette="Set1", 
                               discreteColorA=NA, discreteColorB=NA, discreteColorC=NA, title=NA){
   
-  require(ggplot2)
-  require(gridExtra)
+  library(ggplot2)
+  library(gridExtra)
+  library(RColorBrewer)
   
   if(nrow(spots[!is.na(spots[,fill]),]) == 0){
-    cat("There is no information on that property!")
-    fill <- "Signal"
+    stop("There is no information on that property!")
   } 
   
   if(is.na(title)){
@@ -30,8 +30,7 @@ rppa.plot.heatmap <- function(spots, log=NA, fill="Signal", plotNA=T, palette=NA
     else if(log=="log10") spots$Signal <- log10(spots[["Signal"]])
   }
   
-  p <- qplot(Column, Row, data=spots, main=title)
-  
+  p <- ggplot(spots, aes(x=Column, y=Row)) + ggtitle(title)
   
   if(plotNA) 
   {
@@ -44,14 +43,6 @@ rppa.plot.heatmap <- function(spots, log=NA, fill="Signal", plotNA=T, palette=NA
   else {
     p <- p + geom_tile(data=spots, line=0, aes_string(fill = fill));
   }
-
-  if(fill!="Signal")
-  {
-    empty <- spots[is.na(spots[[fill]]),]
-    spots <- spots[!is.na(spots[[fill]]),]
-    
-    if(dim(empty)[1] != 0) p <- p + geom_tile(data=empty, line=0, fill="grey");
-  }
   
   #how many blocks per row?
   blocksPerRow <- 12
@@ -61,14 +52,18 @@ rppa.plot.heatmap <- function(spots, log=NA, fill="Signal", plotNA=T, palette=NA
   
   p <- p + coord_cartesian(ylim=c(max(spots$Row)+0.5,0.5));
   p <- p + facet_wrap(~Block, ncol=blocksPerRow);
-  p <- p + scale_x_continuous(expand=c(0,0), breaks=seq(1, max(spots$Column), 3)) + scale_y_continuous(expand=c(0,0));
+  p <- p + scale_x_continuous(expand=c(0,0), breaks=seq(1, max(spots$Column), 3)) + scale_y_continuous(expand=c(0,0), trans="reverse");
   p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
                 panel.margin=unit(0.1, "lines"), panel.margin=unit(0, "lines"), 
                 plot.margin=unit(c(1, 1, 0.5, 0.5), "lines"),   
                 plot.title=element_text(size=18), strip.background=element_rect(fill="grey90", colour="grey50"))
   
   #colorbrewer color palette
-  if(!is.na(palette) && is.factor(spots[[fill]])) p <- p + scale_fill_brewer(palette = palette) 
+  if(!is.na(palette) && is.factor(spots[[fill]])){
+    getPalette <- colorRampPalette(brewer.pal(9, palette))
+    discreteFactor <- spots[[fill]]
+    p <- p + scale_fill_manual(values = getPalette(length(levels(discreteFactor))))
+  }  
   
   else if(!is.na(discreteColorA) && !is.na(discreteColorB) && !is.factor(spots[[fill]]))
   {
@@ -81,7 +76,7 @@ rppa.plot.heatmap <- function(spots, log=NA, fill="Signal", plotNA=T, palette=NA
     }
   }
   
-  print(p + scale_y_reverse());
+  print(p);
 }
 
 
