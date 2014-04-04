@@ -1,1 +1,1 @@
-export(rppa.load)
++exportPattern("^[[:alpha:]]+")

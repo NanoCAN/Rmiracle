@@ -1,8 +1,8 @@
 Package: Rmiracle
 Type: Package
 Title: MIRACLE R package
-Version: 0.6.8.4
-Date: 2013-08-18
+Version: 0.9
+Date: 2014-04-04
 Author: Markus List
 Maintainer: Markus List <mlist@health.sdu.dk>
 Description: This package implements a work-flow for the analysis of
@@ -38,3 +38,35 @@ Suggests:
     shinyIncubator,
     SuperCurve,
     manipulate
+Collate:
+    'HuNonParam.R'
+    'JSON.R'
+    'attributes.R'
+    'batch.R'
+    'blockShift.R'
+    'boxPlotComparison.R'
+    'compareSlides.R'
+    'heatmap.R'
+    'multipleComparisons.R'
+    'normalization.R'
+    'orderSampleNames.R'
+    'plotting.R'
+    'proteinConc.R'
+    'proteinConcNormalization.R'
+    'proteinConcOverview.R'
+    'reno.R'
+    'reorderFactors.R'
+    'rppa.control.dilutionFactor.R'
+    'rppa.proteinConc.npi.R'
+    'rppa.proteinConc.plot.R'
+    'selectReference.R'
+    'selectSampleNames.R'
+    'serialDilution.R'
+    'serialDilution.summarize.R'
+    'superCurve.R'
+    'surfaceNormalization.R'
+    'tabus.R'
+    'variableSlopeNormalization.R'
+    'authenticate.R'
+    'startShinyApps.R'
+    'rppa.import.R'    
