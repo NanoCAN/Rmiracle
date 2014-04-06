@@ -74,7 +74,7 @@ function(data.protein.conc, method="mean", filter.bad.results=T,
   if(!is.na(select.columns.A)) result$A <- as.factor(result$A)
   if(!is.na(select.columns.B)) result$B <- as.factor(result$B)
   result$Fill <- as.factor(result$Fill)
-  
+
   if(fillAttribute != "Deposition")
   {
     if(length(unique(result$Deposition)) > 1)
@@ -87,9 +87,9 @@ function(data.protein.conc, method="mean", filter.bad.results=T,
       spots.unified <- ddply(spots.normalized.depositions, remainingCols, summarise, 
             x.weighted.mean = mean(x.weighted.mean, na.rm=T),
             x.err = mean(x.err, na.rm=T))
-      return(spots.unified)
+
+      result <- spots.unified
     }
   }
-  
   return(result)
 }

@@ -73,21 +73,20 @@ rppa.serialDilution <- function(spots, initial.dilution.estimate=2, sensible.min
   spots.summarize$upper <- spots.summarize$x.err + spots.summarize$x.weighted.mean
   spots.summarize$lower <- spots.summarize$x.weighted.mean - spots.summarize$x.err
   
-  readout <- data.frame(concentrations=spots.summarize$readout,
-  upper=spots.summarize$readout.sem + spots.summarize$readout,
-  lower=spots.summarize$readout - spots.summarize$readout.sem)
-  
-  readout.centered <- readout / mean(readout$concentrations, na.rm=T)
-  
-  spots.summarize <- spots.summarize[,!(colnames(spots.summarize) %in% c("x.weighted.mean", "x.err", "flags", "readout", "readout.sem"))]
+  spots.summarize <- spots.summarize[,!(colnames(spots.summarize) %in% c("x.weighted.mean", "x.err", "flags"))]
   attr(spots.summarize, "title") <- attr(spots, "title")
   attr(spots.summarize, "antibody") <- attr(spots, "antibody")
-  attr(spots.summarize, "readout") <- readout
-  attr(spots.summarize, "readout.centered") <- readout.centered
   attr(spots.summarize, "fit") <- fit
   attr(spots.summarize, "fittedData") <- fittedData
   attr(spots.summarize, "pairedData") <- pairedData
   attr(spots.summarize, "estimatedDilutionFactor") <- estDilFactor
+  
+  readout <- data.frame(concentrations=spots.summarize$readout,
+                        upper=spots.summarize$readout.sem + spots.summarize$readout,
+                        lower=spots.summarize$readout - spots.summarize$readout.sem)
+  readout.centered <- readout / mean(readout$concentrations, na.rm=T)
+  attr(spots.summarize, "readout") <- readout
+  attr(spots.summarize, "readout.centered") <- readout.centered
   
   return(spots.summarize)
 }

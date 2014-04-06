@@ -27,7 +27,7 @@ shinyServer(function(input, output, session) {
     query <- parseQueryString(session$clientData$url_search)
     if(length(query$baseUrl > 0)) baseUrl <- query$baseUrl
     else baseUrl <- "http://localhost:8080/MIRACLE/spotExport/"
-    if(length(query$slideSecurityTokens)> 0) slideTokens <- str_split(query$slideSecurityTokens, "\\|")[[1]]
+    if(query$slideSecurityTokens != "") slideTokens <- str_split(query$slideSecurityTokens, "\\|")[[1]]
     else return(NULL)
     
     withProgress(session, min=1, max=(length(slideTokens)+1), expr={
@@ -69,7 +69,7 @@ shinyServer(function(input, output, session) {
     query <- parseQueryString(session$clientData$url_search)
     if(length(query$baseUrl > 0)) baseUrl <- query$baseUrl
     else baseUrl <- "http://localhost:8080/MIRACLE/readoutExport/"
-    if(length(query$plateSecurityTokens)> 0) plateTokens <- str_split(query$plateSecurityTokens, "\\|")[[1]]
+    if(query$plateSecurityTokens != "") plateTokens <- str_split(query$plateSecurityTokens, "\\|")[[1]]
     else return(NULL)
 
     rppa.batch.load.readouts(plateSecurityTokens=plateTokens)
@@ -181,12 +181,12 @@ shinyServer(function(input, output, session) {
     sort(setdiff(colnames(spots), c("vshift", "hshift", "Diameter", "Flag", "FG", "BG", "Signal", "Block", "Row", "Column", "SGADesc", "SGBDesc", "SGCDesc")))
   }
 
-  output$selectA <- renderUI({
-    selectInput("select.columns.A", "Choose horizontal sub-categories", slideProperties(), multiple=T)
+  output$selectB <- renderUI({
+    selectInput("select.columns.B", "Choose horizontal sub-categories", slideProperties(), multiple=T)
   })
 
-  output$selectB <- renderUI({
-   selectInput("select.columns.B", "Choose vertical sub-categories", slideProperties(), multiple=T)
+  output$selectA <- renderUI({
+   selectInput("select.columns.A", "Choose vertical sub-categories", slideProperties(), multiple=T)
   })
 
   output$selectFill <- renderUI({
@@ -223,34 +223,37 @@ shinyServer(function(input, output, session) {
     
       all.slides <- slides()
       all.slides <- all.slides[as.integer(input$selected.slides)]
-    
-      withProgress(session, min=0, max=length(all.slides), {
-        counter <- 0
-        setProgress(message = 'Calculation in progress',
-                    detail = 'This may take a while...', value=counter)
+      input$updateButton
       
-        processEachSlide <- function(slide, counter){
-          if(input$surfaceCorrection)
-          {
-            setProgress(value = counter, detail=paste("Applying surface correction to slide", attr(slide, "slideIndex")))
-            slide <- rppa.surface.normalization(slide, input$positive.control)
-          }
-          
-          if(input$quantification)
-          {
-            setProgress(value = counter, detail=paste("Quantifying slide", attr(slide, "slideIndex")))                          
-            slide <- quantify(slide) 
-          }
-          
-          return(slide)
-        }
+      isolate({
+        withProgress(session, min=0, max=length(all.slides), {
+          counter <- 0
+          setProgress(message = 'Calculation in progress',
+                      detail = 'This may take a while...', value=counter)
         
-        result <- foreach(slide=all.slides) %do% {
-          counter <- counter + 1
-          processEachSlide(slide, counter)
-        }
-        names(result) <- names(all.slides)
-        return(result)
+          processEachSlide <- function(slide, counter){
+            if(input$surfaceCorrection)
+            {
+              setProgress(value = counter, detail=paste("Applying surface correction to slide", attr(slide, "slideIndex")))
+              slide <- rppa.surface.normalization(slide, input$positive.control)
+            }
+            
+            if(input$quantification)
+            {
+              setProgress(value = counter, detail=paste("Quantifying slide", attr(slide, "slideIndex")))                          
+              slide <- quantify(slide) 
+            }
+            
+            return(slide)
+          }
+          
+          result <- foreach(slide=all.slides) %do% {
+            counter <- counter + 1
+            processEachSlide(slide, counter)
+          }
+          names(result) <- names(all.slides)
+          return(result)
+        })
       })
   })
   
@@ -260,8 +263,8 @@ shinyServer(function(input, output, session) {
     if(input$proteinLoadNormalization)
     {
       if(input$normalizationMethod == "houseKeeping"){
-        if(is.null(input$selected.hk.slide)) return(NULL)
-        slidesForNormalization <- subset(all.slides, names(all.slides)%in%input$selected.hk.slide)
+        if(is.null(input$selected.hk.slide)) stop("You have to select at least one slide for housekeeping normalization.")
+        slidesForNormalization <- subset(all.slides, names(all.slides)%in%input$selected.hk.slide) 
       }
       else slidesForNormalization <- all.slides
       
@@ -302,10 +305,9 @@ shinyServer(function(input, output, session) {
         
         if(!is.null(input$reference) && input$normalize.to.ref.sample){
           
-          slideNorm <- rppa.normalize.to.ref.sample(slide, input$reference,each.fill=T)
-          slide$concentrations <- slideNorm$concentrations
-          slide$upper <- slideNorm$upper
-          slide$lower <- slideNorm$lower
+          slideAttr <- attributes(slide)
+          slide <- rppa.normalize.to.ref.sample(slide, input$reference, each.fill=T)
+          mostattributes(slide) <- slideAttr
         }
         
         return(slide)

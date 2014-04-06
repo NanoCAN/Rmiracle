@@ -22,6 +22,8 @@ rppa.reformatColTypes <- function(spots)
   spots$PlateRow <- as.integer(spots$PlateRow)
   spots$PlateLayout <- as.integer(spots$PlateLayout)
   spots$Replicate <- as.integer(spots$Replicate)
+  spots$SpotType <- as.factor(spots$SpotType)
+  spots$SpotClass <- as.factor(spots$SpotClass)
   
   return(spots)
 }

@@ -27,5 +27,12 @@ rppa.tabus <- function(spots, nrep=1, ...){
   attr(spots.summarize, "title") <- attr(spots, "title")
   attr(spots.summarize, "antibody") <- attr(spots, "antibody")
   
+  readout <- data.frame(concentrations=spots.summarize$readout,
+                        upper=spots.summarize$readout.sem + spots.summarize$readout,
+                        lower=spots.summarize$readout - spots.summarize$readout.sem)
+  readout.centered <- readout / mean(readout$concentrations, na.rm=T)
+  attr(spots.summarize, "readout") <- readout
+  attr(spots.summarize, "readout.centered") <- readout.centered
+    
   return(spots.summarize)
 }

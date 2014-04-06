@@ -48,7 +48,7 @@ rppa.superCurve.create.df <- function(new.fit, groupingCols, log2=F)
 }
 
 rppa.superCurve <- function(spots, return.fit.only=F, model="logistic", 
-                            method="nls", ci=F, use.depositions=F, make.plot=T, trim=2, verbose=F, select.columns.A, select.columns.B, select.columns.fill){   
+                            method="nls", ci=F, use.depositions=F, make.plot=T, trim=2, verbose=F, ...){   
   library(limma)
   library(SuperCurve)
   
@@ -94,11 +94,20 @@ rppa.superCurve <- function(spots, return.fit.only=F, model="logistic",
   attr(new.df, "title") <- attr(spots, "title")
   attr(new.df, "antibody") <- attr(spots, "antibody")
   new.df <- new.df[new.df$SpotType%in%c("Sample"),]
-  spots.summarize <- rppa.serialDilution.summarize(new.df, select.columns.A=select.columns.A, select.columns.B=select.columns.B, select.columns.fill=select.columns.fill)
+  spots.summarize <- rppa.serialDilution.summarize(new.df, useDeposition=!(use.depositions), ...)
   spots.summarize$concentrations <- spots.summarize$x.weighted.mean
   spots.summarize$upper <- spots.summarize$x.err + spots.summarize$x.weighted.mean
   spots.summarize$lower <- spots.summarize$x.weighted.mean - spots.summarize$x.err
   spots.summarize <- spots.summarize[!is.na(spots.summarize$Sample),]
   attr(spots.summarize, "fit") <- new.fit
+  
+  readout <- data.frame(concentrations=spots.summarize$readout,
+                        upper=spots.summarize$readout.sem + spots.summarize$readout,
+                        lower=spots.summarize$readout - spots.summarize$readout.sem)
+  readout.centered <- readout / mean(readout$concentrations, na.rm=T)
+  attr(spots.summarize, "readout") <- readout
+  attr(spots.summarize, "readout.centered") <- readout.centered
+  
+  
   return(spots.summarize)
 }
