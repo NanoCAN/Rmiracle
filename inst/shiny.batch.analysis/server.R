@@ -27,7 +27,7 @@ shinyServer(function(input, output, session) {
     query <- parseQueryString(session$clientData$url_search)
     if(length(query$baseUrl > 0)) baseUrl <- query$baseUrl
     else baseUrl <- "http://localhost:8080/MIRACLE/spotExport/"
-    if(query$slideSecurityTokens != "") slideTokens <- str_split(query$slideSecurityTokens, "\\|")[[1]]
+    if(length(query$slideSecurityTokens) > 0) slideTokens <- str_split(query$slideSecurityTokens, "\\|")[[1]]
     else return(NULL)
     
     withProgress(session, min=1, max=(length(slideTokens)+1), expr={

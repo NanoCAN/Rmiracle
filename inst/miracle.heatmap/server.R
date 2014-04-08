@@ -27,7 +27,7 @@ shinyServer(function(input, output, session) {
   #create the heatmap plot
   output$heatmapPlot <- renderPlot({    
     rppa.plot.heatmap(currentSlide(), log=input$log, fill=input$fill, discreteColorA=input$discreteColorA,
-                      discreteColorB=input$discreteColorB, plotNA=input$plotNA, palette=input$palette)
+                      discreteColorB=input$discreteColorB, plotNA=input$plotNA, palette=input$heatmapPalette)
   })
   
 #   #dynamic heatmap

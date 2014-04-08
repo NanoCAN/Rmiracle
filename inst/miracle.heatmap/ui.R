@@ -26,10 +26,12 @@ shinyUI(fluidPage(
                 choices = c("Signal", "FG", "BG","Deposition", "CellLine", "LysisBuffer", "DilutionFactor", "Inducer", "SpotType", "SpotClass", "SampleName", "SampleType", "TargetGene")),
         checkboxInput("plotNA", "Mark excluded spots", value=TRUE)
       ), 
-      column(2, offset = 1,
+      column(3, offset = 1,
         selectInput("discreteColorA", "Select color A", 
                 choices = c("darkblue", "red", "blue", "steelblue", "magenta", "yellow", "white", "green")),
-        selectInput("discreteColorB", "Select color B", c("red", "darkblue", "blue", "steelblue", "magenta", "yellow", "white", "green"))
+        selectInput("discreteColorB", "Select color B", c("red", "darkblue", "blue", "steelblue", "magenta", "yellow", "white", "green")),
+        selectInput("heatmapPalette", "Select color palette for categorical variables", choices=c("Set1", "Set2", "Set3", 
+                                                                                                  "Accent", "Dark2", "Paired", "Pastel1", "Pastel2"), selected="Set1")
       )
     )
 ))
