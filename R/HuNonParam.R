@@ -35,6 +35,7 @@ rppa.nonparam <- function(spots, nrep=1, ...){
   readout.centered <- readout / mean(readout$concentrations, na.rm=T)
   attr(spots.summarize, "readout") <- readout
   attr(spots.summarize, "readout.centered") <- readout.centered
+  spots.summarize$Deposition <- 1
     
   return(spots.summarize)
 }
