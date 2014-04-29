@@ -1,3 +1,6 @@
+#make sure we are using UTF-8
+Sys.setlocale("LC_ALL", "en_US.UTF-8")
+
 library(shiny)
 library(shinyIncubator)
 library(stringr)
