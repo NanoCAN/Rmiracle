@@ -58,7 +58,7 @@ shinyServer(function(input, output, session) {
         else{
           currentSlide <- newSlide
         } 
-        slides[[attr(currentSlide, "slideIndex")]] <- currentSlide
+        slides[[attr(currentSlide, "slideIndex")]] <- currentSlide        
         count <- count + 1
       }
       return(slides)
@@ -106,14 +106,15 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  slideTitles <- function(){
+  slideTitles <- function(onlySelected=F){
     all.slides <- slides()
     if(is.null(all.slides)) return(NULL)
     titles <- c()
-    slideIndices <- c()
+    slideIndices <- list()
     for(slide in all.slides){
       title <- attr(slide, "antibody")
       slideIndex <- attr(slide, "slideIndex")
+      if(onlySelected && !(slideIndex %in% input$selected.slides)) break;
       titles <- append(titles, title)
       slideIndices <- append(slideIndices, slideIndex)
     }
@@ -135,26 +136,28 @@ shinyServer(function(input, output, session) {
   
   output$HKslides <- renderUI({
     all.slides <- slideTitles()
-    if(is.null(all.slides)) return(NULL)
-    else selectInput("selected.hk.slide", "Choose slides for housekeeping normalization", all.slides[as.integer(input$selected.slides)], multiple=TRUE)    
+    if(is.null(all.slides) || is.null(input$selected.slides)) return(NULL)
+    else selectInput("selected.hk.slide", "Choose slides for housekeeping normalization", all.slides[input$selected.slides], multiple=TRUE)    
   })
   
   output$selectHeatmapSlide <- renderUI({
-    all.slides <- slideTitles()
-    if(is.null(all.slides)) return(NULL)
-    else selectInput("slideSelectedForHeatmap", "Choose slide for heatmap", all.slides[as.integer(input$selected.slides)])    
+    all.slides <- slideTitles(onlySelected=T)
+    if(is.null(all.slides)|| is.null(input$selected.slides)) return(NULL)
+    else{
+      selectInput("slideSelectedForHeatmap", "Choose slide for heatmap", all.slides)    
+    } 
   })
   
   output$selectProteinConcSlide <- renderUI({
-    all.slides <- slideTitles()
-    if(is.null(all.slides)) return(NULL)
-    else selectInput("selectedSlideForProteinConcPlot", "Choose slides for protein concentration estimate plot", all.slides[as.integer(input$selected.slides)])    
+    all.slides <- slideTitles(onlySelected=T)
+    if(is.null(all.slides)|| is.null(input$selected.slides)) return(NULL)
+    else selectInput("selectedSlideForProteinConcPlot", "Choose slides for protein concentration estimate plot", all.slides)    
   })
   
   output$selectSignificanceSlide <- renderUI({
-    all.slides <- slideTitles()
-    if(is.null(all.slides)) return(NULL)
-    else selectInput("selectedSlideForSignificancePlot", "Choose slides for testing significance", all.slides[as.integer(input$selected.slides)])    
+    all.slides <- slideTitles(onlySelected=T)
+    if(is.null(all.slides)|| is.null(input$selected.slides)) return(NULL)
+    else selectInput("selectedSlideForSignificancePlot", "Choose slides for testing significance", all.slides)    
   })
   
   output$posControls <- renderUI({
@@ -222,7 +225,7 @@ shinyServer(function(input, output, session) {
   processedSlides <- reactive({
     
       all.slides <- slides()
-      all.slides <- all.slides[as.integer(input$selected.slides)]
+      all.slides <- all.slides[input$selected.slides]
       input$updateButton
       
       isolate({
@@ -459,8 +462,9 @@ shinyServer(function(input, output, session) {
     slide <- all.slides[[input$selectedSlideForProteinConcPlot]]
     
     if(input$compareToReadoutData) slide <- useReadoutAsFill(slide)
-    
-    rppa.proteinConc.plot(slide, title=attr(slide, "title"), swap=input$swap, 
+    fill.legend <- T
+    if(length(slide$Fill) > 20) fill.legend <- F
+    rppa.proteinConc.plot(slide, title=attr(slide, "title"), swap=input$swap, fill.legend=fill.legend,
                           horizontal.line=input$horizontal.line, error.bars=input$error.bars, scales=input$scales)
   })
   

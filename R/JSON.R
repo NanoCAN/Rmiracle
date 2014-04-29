@@ -22,6 +22,7 @@ rppa.load.readout <- function(connection=NULL, securityToken=NA, readoutIndex=NA
   meta <- getURL(metaUrl, curl=connection)
   meta <- fromJSON(meta, simplify=T)
   colnames(wells) <- meta
+  wells <- rppa.reformatPlateColTypes(wells)
 
   assayUrl <- paste(baseUrl, "getAssayType/", readoutIndex, sep = "")
   if(!is.na(securityToken)) assayUrl <- paste(assayUrl, "?securityToken=", securityToken, sep="")
@@ -142,7 +143,7 @@ rppa.load <- function (connection=NULL, barcode=NA, slideIndex=NA, securityToken
         titleUrl <- paste(baseUrl, "getTitle/", i, sep = "")
         if(!is.na(securityToken)) titleUrl <- paste(titleUrl, "?securityToken=", securityToken, sep="")
                            
-        cat(paste(i, ":", paste(scan(text=getURL(titleUrl, curl=connection), what="character"), collapse=" ")))  
+        cat(paste(i, ":", paste(scan(text=getURL(titleUrl, curl=connection), what="character", fileEncoding="UTF-8"), collapse=" ")))  
       }
       slideIndex <- readline("Please enter a slide index:")
     }

@@ -28,6 +28,18 @@ rppa.reformatColTypes <- function(spots)
   return(spots)
 }
 
+rppa.reformatPlateColTypes <- function(plate)
+{
+  plate$id <- as.integer(plate$id)
+  plate$Plate <- as.integer(plate$Plate)
+  plate$PlateRow <- as.integer(plate$PlateRow)
+  plate$PlateCol <- as.integer(plate$PlateCol)
+  plate$PlateLayout <- as.integer(plate$PlateLayout)
+  plate$PlateReadout <- as.numeric(plate$PlateReadout)
+  plate$Replicate <- as.integer(plate$Replicate)
+  return(plate)
+}
+
 rppa.filter.diameter <- function(spots)
 {
   spots$Diameter <- as.double(spots$Diameter)
