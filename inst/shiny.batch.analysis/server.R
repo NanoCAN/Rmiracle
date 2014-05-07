@@ -140,7 +140,7 @@ shinyServer(function(input, output, session) {
   output$HKslides <- renderUI({
     all.slides <- slideTitles()
     if(is.null(all.slides) || is.null(input$selected.slides)) return(NULL)
-    else selectInput("selected.hk.slide", "Choose slides for housekeeping normalization", all.slides[input$selected.slides], multiple=TRUE)    
+    else selectInput("selected.hk.slide", "Choose slides for housekeeping normalization", all.slides, multiple=TRUE)    
   })
   
   output$selectHeatmapSlide <- renderUI({
