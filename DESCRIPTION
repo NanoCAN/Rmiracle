@@ -1,7 +1,7 @@
 Package: Rmiracle
 Type: Package
 Title: MIRACLE R package
-Version: 0.9
+Version: 0.9.1
 Date: 2014-04-04
 Author: Markus List
 Maintainer: Markus List <mlist@health.sdu.dk>
@@ -69,4 +69,8 @@ Collate:
     'variableSlopeNormalization.R'
     'authenticate.R'
     'startShinyApps.R'
-    'rppa.import.R'    
+    'rppa.import.R'   
+    'linear.R'
+    'multiscan.R'
+    'quantileNormalization.R'
+
