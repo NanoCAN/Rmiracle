@@ -52,7 +52,7 @@ rppa.proteinConc <-
       
     }, swap = checkbox(FALSE, "Swap category orientation"),
                horizontal.line = checkbox(FALSE, "Draw horizontal line through 1"),
-               error.bars = checkbox(TRUE, "Plot error bars"),   
+               error.bars = checkbox(TRUE, "Plot error bars"),
                normalize.fill=checkbox(FALSE, "Normalize fill"),
                normalize.to.ref.sample=checkbox(FALSE, "Normalize to reference"),
                reference=picker(as.list(if(!is.na(subset.sample)) subset.sample else c(levels(data.protein.conc$Sample), NA))),

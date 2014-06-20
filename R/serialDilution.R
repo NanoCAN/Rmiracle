@@ -30,7 +30,7 @@ rppa.serialDilution.batch <- function(slideList)
   return(data.protein.conc)
 }
 
-rppa.serialDilution <- function(spots, initial.dilution.estimate=2, sensible.min=5, sensible.max=6e4, method="nls", compress.results=T, make.plot=T, ...)
+rppa.serialDilution <- function(spots, initial.dilution.estimate=2, sensible.min=1, sensible.max=6e4, method="nls", compress.results=T, make.plot=T, useDepositionsInModel=F, ...)
 { 
   #get title
   slideTitle <- attr(spots, "title")
@@ -46,8 +46,24 @@ rppa.serialDilution <- function(spots, initial.dilution.estimate=2, sensible.min
   #calculate matrix of dilutions
   spots.m <- rppa.serialDilution.dilutionMatrix(spots.c, numOfDilutions)
   
+  depositionCorrection <- function(slide){
+    deposFactors = sort(unique(slide$Deposition))
+    result <- foreach(i=2:length(deposFactors), .combine=cbind) %do%
+    {
+      correction <- median(slide[slide$Deposition == deposFactors[i], "Signal"],na.rm=T) /
+      median(slide[slide$Deposition == deposFactors[1], "Signal"],na.rm=T)
+    }
+    result <- as.vector(cbind(1, result))
+    names(result) <- deposFactors
+    
+    return(result)
+  }
+  
+  if(!is.null(spots.c$Deposition)) correctedDepositions <- spots.c$Deposition
+  #correctedDepositions <- depositionCorrection(spots)[as.character(spots.c$Deposition)]
+  
   #compute the actual protein estimates using the serial dilution method
-  spots.e <- rppa.serialDilution.compute(spots.m, initial.dilution.estimate, sensible.min, sensible.max, method, slideTitle, make.plot)
+  spots.e <- rppa.serialDilution.compute(spots.m, initial.dilution.estimate, sensible.min, sensible.max, method, slideTitle, make.plot, correctedDepositions, useDepositionsInModel)
   
   #fit 
   fit <- attr(spots.e, "fit")
@@ -119,13 +135,13 @@ rppa.serialDilution.format <- function(spots, useDepositionsInDilutionSeries=F) 
   return(spots.c)
 } 
 
-rppa.serialDilution.pairColumns <- function(spots, startColumn=1){
+rppa.serialDilution.pairColumns <- function(spots, startColumn=1, depositions=NA){
   
-  pairedData <- data.frame(x=numeric(0), y=numeric(0))
+  pairedData <- data.frame(x=numeric(0), y=numeric(0), depos=numeric(0))
   
   for(i in startColumn:(ncol(spots)-1))
   {
-    pairedData <- rbind(pairedData, cbind(x=spots[,i+1], y=spots[,i]))  
+    pairedData <- rbind(pairedData, cbind(x=spots[,i+1], y=spots[,i], depos=depositions))  
   }
   
   return(pairedData)
@@ -165,10 +181,10 @@ rppa.serialDilution.filter <- function(data, sensible.min, sensible.max)
   return(data)
 }
 
-rppa.serialDilution.compute <- function(spots.m, initial.dilution.estimate=2, sensible.min=5, sensible.max=6e4, method="nls", slideTitle="", make.plot=T){
-  
+rppa.serialDilution.compute <- function(spots.m, initial.dilution.estimate=2.5, sensible.min=5, sensible.max=6e4, method="nls", slideTitle="", make.plot=T, depositions=NA, useDepositionsInModel=F){
+
   #pair columns for serial dilution plot
-  pairedData <- rppa.serialDilution.pairColumns(spots.m)
+  pairedData <- rppa.serialDilution.pairColumns(spots.m, depositions=depositions)
   
   #starting values for non-linear model fit
   a <- max(5, min(spots.m, na.rm=T))
@@ -181,12 +197,16 @@ rppa.serialDilution.compute <- function(spots.m, initial.dilution.estimate=2, se
   pairedData <- rppa.serialDilution.filter(pairedData, sensible.min, sensible.max)
   
   #nls model fit
-  if(method=="nlsLM") fit <- nlsLM(y ~ a +1/((1/(x -a) -c)/D+c), data=pairedData, start=list(a=a,D=D,c=1/M))
-  else fit <- nls(y ~ a +1/((1/(x -a) -c)/D+c), data=pairedData, start=list(a=a,D=D,c=1/M),alg="port", lower=list(minimal.err,1,0),weights=1/(minimal.err+abs(as.numeric(x))))
-  
+  if(useDepositionsInModel){
+    if(method=="nlsLM") fit <- nlsLM(y ~ a +1/((1/(x -a) -c)/(D * depos)+c), data=pairedData, start=list(a=a,D=D,c=1/M))
+    else fit <- nls(y ~ a +1/((1/(x -a) -c)/(D * depos)+c), data=pairedData, start=list(a=a,D=D,c=1/M),alg="port", lower=list(minimal.err,1,0),weights=1/(minimal.err+abs(as.numeric(x))))
+  }
+  else{
+    if(method=="nlsLM") fit <- nlsLM(y ~ a +1/((1/(x -a) -c)/(D)+c), data=pairedData, start=list(a=a,D=D,c=1/M))
+    else fit <- nls(y ~ a +1/((1/(x -a) -c)/(D)+c), data=pairedData, start=list(a=a,D=D,c=1/M),alg="port", lower=list(minimal.err,1,0),weights=1/(minimal.err+abs(as.numeric(x))))    
+  }
   #calculate fitted data
-  fittedData <- data.frame(x=pairedData$x, y=predict(fit, data.frame(x=pairedData$x)))
-  
+  fittedData <- data.frame(x=pairedData$x, depos=pairedData$depos, y=predict(fit, data.frame(x=pairedData$x, depos=pairedData$depos)))
   #assemble parameters for serial dilution algorithm
   a <- summary(fit)$parameter[1]
   D <- summary(fit)$parameter[2]
@@ -200,12 +220,21 @@ rppa.serialDilution.compute <- function(spots.m, initial.dilution.estimate=2, se
     #plot serial dilution curve
     require(ggplot2)
     require(gridExtra)
-    print(ggplot(fittedData, aes(x=y, y=log2(x))) + labs(title=paste("Signal to concentration estimate plot: ", slideTitle)) + ylab("Signal") + xlab("Concentration estimate") + geom_point() + geom_smooth(aes(group=1), method="loess"))
-    print(ggplot(pairedData, aes(x=x, y=y)) + labs(title=paste("Serial Dilution Curve Fit: ", slideTitle, ", estimated dilution factor ", round(D, 2))) + xlab("Signal at next dilution step") + ylab("Signal") + geom_point() + geom_line(data=fittedData, color="blue") + geom_abline(intercept=0, slope=1, color="red"))
+    #print(ggplot(fittedData, aes(x=y, y=log2(x))) + labs(title=paste("Signal to concentration estimate plot: ", slideTitle)) + ylab("Signal") + xlab("Concentration estimate") + geom_point(aes(color=as.factor(depos))) + geom_smooth(aes(group=depos), method="loess"))
+    sdc.plot <- ggplot(pairedData, aes(x=x, y=y)) + labs(title=paste("Serial Dilution Curve Fit: ", slideTitle, ", estimated dilution factor ", round(D, 2))) + xlab("Signal at next dilution step") + ylab("Signal") + geom_point(aes(color=as.factor(depos))) 
+    sdc.plot <- sdc.plot + geom_abline(intercept=0, slope=1, color="red")
+    if(useDepositionsInModel){    
+      sdc.plot <- sdc.plot + geom_line(aes(group=depos, color=as.factor(depos)), data=fittedData)
+      sdc.plot <- sdc.plot + scale_color_discrete(name="Depositions")
+    }
+    else{
+      sdc.plot <- sdc.plot + geom_line(data=fittedData)
+    }
+    print(sdc.plot)
   }
   
   #estimate protein concentrations
-  serialDilutionResult <- rppa.serialDilution.protein.con(D0=D0, D=D,c=c,a=a,d.a=d.a, d.D=d.D, d.c=d.c,data.dilutes=spots.m)
+  serialDilutionResult <- rppa.serialDilution.protein.con(D0=D0, D=D,c=c,a=a,d.a=d.a, d.D=d.D, d.c=d.c,data.dilutes=spots.m,depos=depositions)
   
   #add fit object
   attr(serialDilutionResult, "fit") <- fit
@@ -216,7 +245,7 @@ rppa.serialDilution.compute <- function(spots.m, initial.dilution.estimate=2, se
   return(serialDilutionResult)
 }
 
-rppa.serialDilution.protein.con <- function (D0,D,c,a,d.D,d.c, d.a, data.dilutes,r=1.2,minimal.err=5) {
+rppa.serialDilution.protein.con <- function (D0,D,c,a,d.D,d.c, d.a, data.dilutes,r=1.2,minimal.err=5, depos) {
   #D0 = dilution.factor # this is a preset value in diluteion experiments, typical D0=10, 3, or 2.
   #D fitted dilution factor. Ideally, D = D0 ^ gamma, where gamma is a parameter in Sips model
   # k 1:ncol(data.dilutes)    # index of dilute dilution steps in each dilution sereies
@@ -226,7 +255,7 @@ rppa.serialDilution.protein.con <- function (D0,D,c,a,d.D,d.c, d.a, data.dilutes
   xflag = x.weighted.mean    # takes values of 0,1,2, which means under detection, OK, saturated
   K = ncol(data.dilutes)   	# number of total dilution steps for a sample
   igamma = log(D0)/log(D)	#where gamma is 1/gamma, a parameter in Sips model
-  M =min(1e5,1/c+a)			#when M is too large, take 1e9.
+  M =min(6e4,1/c+a)			#when M is too large, take 1e9.
   
   x.saturation.level=   D0^(K-1)/((1/( M/r - a)- 1/(M-a)))^igamma 
   x.nodetection.level = D0^(1-1)/((1/( r*a - a)- 1/(M-a)))^igamma
@@ -251,12 +280,12 @@ rppa.serialDilution.protein.con <- function (D0,D,c,a,d.D,d.c, d.a, data.dilutes
         
         for (k in 1:K){# for each signal in a dilution series
           y[k] =max(min(M/1.01,y[k]), a+minimal.err) # limit y[k] to be within a+minimal.err and M/1.01
-          x[k] =   D0^(k-1) /(1/(y[k]-a)- c)^igamma #estimated protein concentration prior dilution
+          x[k] =   D0^(k-1) * depos[Np] /(1/(y[k]-a)- c)^igamma #estimated protein concentration prior dilution
           #estimate the derivitives
-          de.x.over.de.a = igamma * D0^(k-1)*(1/(y[k]-a)- c)^(-igamma-1)/(y[k]-a)^2
+          de.x.over.de.a = igamma * D0^(k-1) * depos[Np] *(1/(y[k]-a)- c)^(-igamma-1)/(y[k]-a)^2
           
-          de.x.over.de.c = igamma * D0^(k-1)*(1/(y[k]-a)- c)^(-igamma-1)
-          de.x.over.de.D = x[k] *log(1/(y[k]-a)- c) * igamma/D/log(D)/D0^(k-1)
+          de.x.over.de.c = igamma * D0^(k-1) * depos[Np] * (1/(y[k]-a)- c)^(-igamma-1)
+          de.x.over.de.D = x[k] *log(1/(y[k]-a)- c) * igamma/D/log(D)/(D0^(k-1) * depos[Np])
           w[k] = (de.x.over.de.a * d.a)^2 + ( de.x.over.de.c * d.c)^2 + (de.x.over.de.D * d.D)^2
         }
         w = w[!is.na(x)] # removing signals near saturation or bg noise

@@ -248,7 +248,7 @@ shinyServer(function(input, output, session) {
             {
               setProgress(value = counter, detail=paste("Quantifying slide", attr(slide, "slideIndex")))                          
               slide <- quantify(slide) 
-            }
+            }          
             
             return(slide)
           }
@@ -256,6 +256,16 @@ shinyServer(function(input, output, session) {
           result <- foreach(slide=all.slides) %do% {
             counter <- counter + 1
             processEachSlide(slide, counter)
+          }
+          
+          setProgress(value = counter, detail=paste("Applying normalization", attr(slide, "slideIndex")))                          
+          
+          if(input$estimateNormalization){
+            rppa.quantile.normalize(result, input$estimateNormMethod)
+          }
+          
+          if(input$calcNormFactors){          
+            rppa.calcNormFactors(result, input$calcNormMethod)
           }
           names(result) <- names(all.slides)
           return(result)

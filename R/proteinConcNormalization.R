@@ -90,14 +90,13 @@ rppa.proteinConc.normalize <- function(slideA, slideB, method="houseKeeping", no
     slideA$concentrations <- mydata.gam[,1]
     allConcentrations <- mydata.gam[,-1]
   }
-  if(method %in% c("medianLoading", "variableSlope"))
+  if(method %in% c("medianLoading", "variableSlope") && numberOfSlidesInB > 1)
   {
     #in median loading normalization the median value of all housekeeping proteins is selected.
     #variable slope normalization follows the same principle, but applies a correction factor gamma first.
     
     #take the median of each row
     medians <- apply(allConcentrations, 1, which.median)
-    print(medians)
     
     #index of the median is needed for finding the 
     #corresponding confidence intervals
@@ -147,9 +146,6 @@ rppa.proteinConc.normalize <- function(slideA, slideB, method="houseKeeping", no
   result <- slideA
   result$concentrations <- slideA$concentrations / slideB$concentrations
   
-  print(head(slideA))
-  print(head(slideB))
-  print(head(result))
   #combine error
   result$upper <- poolDivisionError(cbind(slideA$upper,slideB$upper)) 
   result$lower <- poolDivisionError(cbind(slideA$lower,slideB$lower))

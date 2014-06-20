@@ -27,6 +27,14 @@ shinyUI(pageWithSidebar(
       selectInput("superCurve.method", "Select a fit method", c("nls", "nlrob", "nlrq"), "nlrq"),
       selectInput("superCurve.model", "Select a response curve model", c("logistic", "loess", "cobs"), "cobs")),
       conditionalPanel(condition="input.method=='hu'", strong("Warning: Computation with this method is time intensive")),
+    checkboxInput("estimateNormalization", "Apply quantile normalization?", FALSE),
+    conditionalPanel(condition= "input.estimateNormalization",
+                     selectInput("estimateNormMethod", "Normalize:", choices = c("Affy"="affyQuant", "Aroma light"="aromaQuant"))                  
+    ),
+    checkboxInput("calcNormFactors", "Calculate normalization factors for each slide?", FALSE),
+    conditionalPanel(condition= "input.calcNormFactors",
+                     selectInput("calcNormMethod", "Normalize:", choices = c("Trimmed Mean"="TMM", "Relative log expression"="RLE", "upperquartile"="upper quartile"))                     
+    ),
     checkboxInput("proteinLoadNormalization", "Normalize for total protein amount?", FALSE),
     conditionalPanel(condition= "input.proteinLoadNormalization",
                      selectInput("normalizationMethod", "Normalization Method:", choices = c("House keeping proteins"="houseKeeping", "Median Loading"="medianLoading", "Variable Slope"="variableSlope")),

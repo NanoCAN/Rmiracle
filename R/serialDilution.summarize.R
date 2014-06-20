@@ -75,21 +75,5 @@ function(data.protein.conc, method="mean", filter.bad.results=T,
   if(!is.na(select.columns.B)) result$B <- as.factor(result$B)
   result$Fill <- as.factor(result$Fill)
 
-  if(fillAttribute != "Deposition")
-  {
-    if(length(unique(result$Deposition)) > 1)
-    {
-      spots.normalized.depositions <- within(result, {
-        x.weighted.mean <- x.weighted.mean / as.numeric(Deposition)
-        x.err  <- x.err / as.numeric(Deposition) 
-      })
-      remainingCols <- setdiff(colnames(spots.normalized.depositions), c("Deposition", "x.weighted.mean", "x.err", "sem"))
-      spots.unified <- ddply(spots.normalized.depositions, remainingCols, summarise, 
-            x.weighted.mean = mean(x.weighted.mean, na.rm=T),
-            x.err = mean(x.err, na.rm=T))
-
-      result <- spots.unified
-    }
-  }
   return(result)
 }

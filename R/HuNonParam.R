@@ -1,13 +1,13 @@
 rppa.nonparam <- function(spots, nrep=1, ...){
   library(cobs)
   
-  spots$Signal <- spots$FG-spots$BG #method can't deal with NA values
-  spots$Signal[spots$Signal < 0] <- 0 
+  #spots$Signal <- spots$FG-spots$BG #method can't deal with NA values
+  #spots$Signal[spots$Signal < 0] <- 0 
   
   spots <- subset(spots, SpotClass=="Sample")
   
   #convert input table so that each dilution is in one column
-  spots.c <- rppa.serialDilution.format(spots, useDepositionsInDilutionSeries=T)
+  spots.c <- rppa.serialDilution.format(spots, useDepositionsInDilutionSeries=F)
   
   #extract number of different dilutions that are not NA
   numOfDilutions <- attr(spots.c, "numOfDilutions")

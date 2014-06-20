@@ -1,10 +1,24 @@
-rppa.tukeyHSD <- function(slide)
+rppa.tukeyHSD <- function(slide, control="OTC#3")
 {
+  levelsA = levels(as.factor(as.character(slide$A)))
+  if(is.null(levels(slide$A))) levelsA <- "NA"
+  
+  levelsB = levels(as.factor(as.character(slide$B)))
+  if(is.null(levels(slide$B))) levelsB <- "NA"
+  
   foreach(A = levels(slide$A), .combine=rbind) %do%{
     foreach(B = levels(slide$B), .combine=rbind) %do%{
       slide.subset <- subset(slide, A==A & B==B)
-      tukey.df <- as.data.frame(TukeyHSD(aov(concentrations ~ Sample, data=slide.subset), ordered=T)$Sample)
+      tukey.df <- as.data.frame(TukeyHSD(aov(Signal ~ SampleName, data=slide.subset), ordered=T)$SampleName)
+      
       tukey.df$Samples <- row.names(tukey.df)
+      tukey.df <- tukey.df[grepl(control, tukey.df$Samples),]
+      
+      avgControl <- mean(subset(slide.subset, SampleName %in% control)$Signal, na.rm=T)
+      tukey.df$diff <- tukey.df$diff + avgControl
+      tukey.df$upr <- tukey.df$upr + avgControl
+      tukey.df$lwr <- tukey.df$lwr + avgControl
+      
       tukey.df$A <- A
       tukey.df$B <- B
       tukey.df$slide <- slide$Slide[1]
@@ -17,7 +31,6 @@ rppa.plot.tukey <- function(pvalues, p.cutoff=1)
 {
   require(ggplot2)
   require(scales)
-  
   pvalues.subset <- subset(pvalues, `p adj` <= p.cutoff)
   pvalues.subset$symbol <- ""
   pvalues.subset[pvalues.subset[["p adj"]] < 0.01, "symbol"] <- "*"
@@ -30,7 +43,7 @@ rppa.plot.tukey <- function(pvalues, p.cutoff=1)
   q <- q + scale_fill_gradient2(trans="log", low="red", guide="legend", mid="orange", high="yellow", breaks=10^(-(seq(-3, 12, by=3))))
   q <- q + facet_grid(A ~ B)
   #q <- q + geom_text(aes(y = diff + stderror), vjust=0.1)
-  q <- q + scale_y_continuous(labels = percent)
+  #q <- q + scale_y_continuous(labels = percent)
   print(q)
 }
 
@@ -58,7 +71,7 @@ rppa.dunnett <- function(slide, referenceSample="OTC#3", sample.subset=NULL)
       if(nrow(subset(slide.subset, Sample == referenceSample)) == 0) stop(paste("Reference sample could not be found in group", currentA, "/", currentB, ". Change grouping parameters or select a subset of samples."))
       
       #center data first
-      slide.subset$concentrations <- slide.subset$concentrations / mean(slide.subset$concentrations)
+      #slide.subset$concentrations <- slide.subset$concentrations / mean(slide.subset$concentrations, na.rm=T)
       
       slide.subset$Sample <- relevel(as.factor(as.character(slide.subset$Sample)), ref=referenceSample)
       slide.aov <- aov(concentrations ~ Sample, data=slide.subset)
