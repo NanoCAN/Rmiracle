@@ -32,12 +32,15 @@ Depends:
     plyr,
     reshape,
     scales,
-    cobs
+    cobs,
+    stringr
 Suggests:
     shiny,
     shinyIncubator,
     SuperCurve,
-    manipulate
+    manipulate,
+    aroma.light,
+    edgeR
 Collate:
     'HuNonParam.R'
     'JSON.R'

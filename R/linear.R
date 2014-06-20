@@ -1,5 +1,5 @@
 rppa.linear <- function(slide, select.columns.sample="SampleName", select.columns.A, select.columns.B, select.columns.fill){
-  
+  library(stringr)
   slide <- subset(slide, SpotClass=="Sample")
   slide$DilutionFactor <- as.factor(slide$DilutionFactor)
   slide$Deposition <- as.factor(slide$Deposition)
