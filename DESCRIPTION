@@ -33,7 +33,8 @@ Depends:
     reshape,
     scales,
     cobs,
-    stringr
+    stringr,
+    dplyr
 Suggests:
     shiny,
     shinyIncubator,

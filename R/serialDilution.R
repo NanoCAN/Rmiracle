@@ -225,11 +225,11 @@ rppa.serialDilution.compute <- function(spots.m, initial.dilution.estimate=2.5, 
     sdc.plot <- sdc.plot + geom_abline(intercept=0, slope=1, color="red")
     if(useDepositionsInModel){    
       sdc.plot <- sdc.plot + geom_line(aes(group=depos, color=as.factor(depos)), data=fittedData)
-      sdc.plot <- sdc.plot + scale_color_discrete(name="Depositions")
     }
     else{
       sdc.plot <- sdc.plot + geom_line(data=fittedData)
     }
+    sdc.plot <- sdc.plot + scale_color_discrete(name="Depositions")    
     print(sdc.plot)
   }
   

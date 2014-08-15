@@ -1,7 +1,8 @@
 rppa.proteinConc.plot <- function(data.protein.conc, title="", swap=F, horizontal.line=T, fill.legend=T, error.bars=T, scales="free", sample.subset=NA, reference=NA, slideAsFill=F, ...){
   
-  require(ggplot2)
-  require(gridExtra) 
+  library(ggplot2)
+  library(gridExtra) 
+  library(dplyr)
   
   #subset samples and reorder 
   if(!is.na(sample.subset)[1])
@@ -25,12 +26,13 @@ rppa.proteinConc.plot <- function(data.protein.conc, title="", swap=F, horizonta
                ylab="Estimated Protein Concentration (Relative Scale)",xlab="Sample", geom="bar", fill=Slide, position="dodge")
   }
   
-  #else if(!is.null(data.protein.conc$Deposition)){  
-  #  data.protein.conc$Deposition <- as.factor(data.protein.conc$Deposition)
-  #  p <- qplot(Sample, concentrations, data=data.protein.conc, 
-  #             main=title, stat="identity", 
-  #             ylab="Estimated Protein Concentration (Relative Scale)",xlab="Sample", geom="bar", fill=Deposition, position="dodge")
-  #}
+  else if(!is.null(data.protein.conc$Deposition)){  
+    data.protein.conc$Deposition <- as.factor(data.protein.conc$Deposition)
+    data.protein.conc <- data.protein.conc %.% group_by(Sample, Fill, A, B) %.% summarise_each(funs(mean(., na.rm=T)), -Deposition)
+    p <- qplot(Sample, concentrations, data=data.protein.conc, 
+               main=title, stat="identity", 
+               ylab="Estimated Protein Concentration (Relative Scale)",xlab="Sample", geom="bar", fill=Fill, position="dodge")
+  }
   else if(!is.null(data.protein.conc$Fill))
   {
     data.protein.conc$Fill <- as.factor(data.protein.conc$Fill)

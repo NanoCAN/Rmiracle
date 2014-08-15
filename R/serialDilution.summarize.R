@@ -56,17 +56,7 @@ function(data.protein.conc, method="mean", filter.bad.results=T,
   if(!is.na(select.columns.B)) selection <- c(selection, "B")
   if(useDeposition) selection <- c(selection, "Deposition")
   
-  if(!is.na(select.columns.A) && !is.na(select.columns.B))
-    result <- ddply(result, selection, summarise, readout=mean(PlateReadout, na.rm=T), readout.sem=sqrt(var(PlateReadout,na.rm=TRUE)/length(na.omit(PlateReadout))), x.weighted.mean=mean(x.weighted.mean, na.rm=T), x.err=sum(x.err.percent, na.rm=T), sem=sqrt(var(x.weighted.mean,na.rm=TRUE)/length(na.omit(x.weighted.mean))))
-  
-  else if(!is.na(select.columns.A) && is.na(select.columns.B))
-    result <- ddply(result, .(Sample, A, Fill, Deposition), summarise, readout=mean(PlateReadout, na.rm=T), readout.sem=sqrt(var(PlateReadout,na.rm=TRUE)/length(na.omit(PlateReadout))), x.weighted.mean=mean(x.weighted.mean, na.rm=T), x.err=sum(x.err.percent, na.rm=T), sem=sqrt(var(x.weighted.mean,na.rm=TRUE)/length(na.omit(x.weighted.mean))))
-  
-  else if(!is.na(select.columns.B) && is.na(select.columns.A))
-    result <- ddply(result, .(Sample, B, Fill, Deposition), summarise, readout=mean(PlateReadout, na.rm=T), readout.sem=sqrt(var(PlateReadout,na.rm=TRUE)/length(na.omit(PlateReadout))), x.weighted.mean=mean(x.weighted.mean, na.rm=T), x.err=sum(x.err.percent, na.rm=T), sem=sqrt(var(x.weighted.mean,na.rm=TRUE)/length(na.omit(x.weighted.mean))))
-  
-  else result <- ddply(result, .(Sample, Fill, Deposition), summarise, readout=mean(PlateReadout, na.rm=T), readout.sem=sqrt(var(PlateReadout,na.rm=TRUE)/length(na.omit(PlateReadout))), x.weighted.mean=mean(x.weighted.mean, na.rm=T), x.err=sum(x.err.percent, na.rm=T), sem=sqrt(var(x.weighted.mean,na.rm=TRUE)/length(na.omit(x.weighted.mean))))
-
+  result <- ddply(result, selection, summarise, readout=mean(PlateReadout, na.rm=T), readout.sem=sqrt(var(PlateReadout,na.rm=TRUE)/length(na.omit(PlateReadout))), x.weighted.mean=mean(x.weighted.mean, na.rm=T), x.err=sum(x.err.percent, na.rm=T), sem=sqrt(var(x.weighted.mean,na.rm=TRUE)/length(na.omit(x.weighted.mean))))
   result$x.err <- result$x.weighted.mean * result$x.err
   
   #make sure A, B and sample are factors
