@@ -77,4 +77,5 @@ Collate:
     'linear.R'
     'multiscan.R'
     'quantileNormalization.R'
+    'rppa.normalize.depos.R'
 
