@@ -79,4 +79,5 @@ rppa.proteinConc.plot <- function(data.protein.conc, title="", swap=F, horizonta
   p <- p + theme(plot.margin = unit(c(1,2,1,1), "cm"))
   
   print(p)
+  return(data.protein.conc)
 }
