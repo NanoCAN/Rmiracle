@@ -28,7 +28,12 @@ rppa.proteinConc.plot <- function(data.protein.conc, title="", swap=F, horizonta
   
   else if(!is.null(data.protein.conc$Deposition)){  
     data.protein.conc$Deposition <- as.factor(data.protein.conc$Deposition)
-    data.protein.conc <- data.protein.conc %.% group_by(Sample, Fill, A, B) %.% summarise_each(funs(mean(., na.rm=T)), -Deposition)
+    #convert error bars to percentage
+    data.protein.conc <- mutate(data.protein.conc, upper=(upper-concentrations)/concentrations, lower=(concentrations-lower)/concentrations)
+    data.protein.conc <- data.protein.conc %.% group_by(.groups = intersect(colnames(data.protein.conc), c("Sample", "Fill", "A", "B") %.% summarise(concentrations=mean(concentrations, na.rm=T), upper=sum(upper, na.rm=T), lower=sum(lower, na.rm=T))
+    #revert to absolute errors
+    data.protein.conc <- mutate(data.protein.conc, upper=(1+upper)*concentrations, lower=(1-lower)*concentrations)
+    
     p <- qplot(Sample, concentrations, data=data.protein.conc, 
                main=title, stat="identity", 
                ylab="Estimated Protein Concentration (Relative Scale)",xlab="Sample", geom="bar", fill=Fill, position="dodge")

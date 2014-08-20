@@ -98,10 +98,9 @@ rppa.plot.dunnett <- function(pvalues, p.cutoff=1, set.neg.control.to.one=F, tit
   if(set.neg.control.to.one) pvalues.subset$estimates <- (pvalues.subset$estimates + 1)
   
   pvalues.subset$symbol <- ""
-  pvalues.subset[pvalues.subset$pvalues < 0.05, "symbol"] <- "."
-  pvalues.subset[pvalues.subset$pvalues < 0.01, "symbol"] <- "*"
-  pvalues.subset[pvalues.subset$pvalues < 0.001, "symbol"] <- "**"
-  pvalues.subset[pvalues.subset$pvalues < 0.0001, "symbol"] <- "***"
+  pvalues.subset[pvalues.subset$pvalues < 0.05, "symbol"] <- "*"
+  pvalues.subset[pvalues.subset$pvalues < 0.01, "symbol"] <- "**"
+  pvalues.subset[pvalues.subset$pvalues < 0.001, "symbol"] <- "***"
   
   breaks <- c(c(1, 0.1, 0.05, 0.01, 0.001), 10^(-(seq(6, 21, by=3))))
   limits <- aes(ymax = estimates + stderror, ymin = estimates - stderror)

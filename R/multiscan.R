@@ -22,7 +22,7 @@ rppa.load.all.pmt <- function(connection, barcode, baseUrl="http://10.149.64.36:
 rppa.pick.best.pmt <- function(slides)
 {
   quality <- foreach(slide=slides, .combine=rbind) %do% {
-    slide_iqr <- IQR(subset(slide, SpotClass="Sample")$FG)
+    slide_iqr <- IQR(na.omit(subset(slide, SpotClass="Sample")$FG))
     
     spots <- subset(slide, SpotClass=="Sample")
     

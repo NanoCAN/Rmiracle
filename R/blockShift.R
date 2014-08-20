@@ -9,7 +9,7 @@ rppa.hshift <- function(spots){
   
   library(dplyr)
   spots <- spots %.% group_by(Block, Row) %.% arrange(Column) %.% mutate_each(funs(rppa.shift.vector(., min(hshift))), Signal, FG, BG, Flag, Diameter)
-  return(spots)
+  return(ungroup(spots))
 }
 
 rppa.vshift <- function(spots){
@@ -23,7 +23,7 @@ rppa.vshift <- function(spots){
   
   library(dplyr)
   spots <- spots %.% group_by(Block, Column) %.% arrange(Row) %.% mutate_each(funs(rppa.shift.vector(., min(vshift))), Signal, FG, BG, Flag, Diameter)
-  return(spots)
+  return(ungroup(spots))
 }
 
 
