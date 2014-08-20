@@ -30,7 +30,10 @@ rppa.proteinConc.plot <- function(data.protein.conc, title="", swap=F, horizonta
     data.protein.conc$Deposition <- as.factor(data.protein.conc$Deposition)
     #convert error bars to percentage
     data.protein.conc <- mutate(data.protein.conc, upper=(upper-concentrations)/concentrations, lower=(concentrations-lower)/concentrations)
-    data.protein.conc <- data.protein.conc %.% group_by(.groups = intersect(colnames(data.protein.conc), c("Sample", "Fill", "A", "B") %.% summarise(concentrations=mean(concentrations, na.rm=T), upper=sum(upper, na.rm=T), lower=sum(lower, na.rm=T))
+    data.protein.conc <- data.protein.conc %.% regroup(lapply(intersect(colnames(data.protein.conc), 
+                         c("Sample", "Fill", "A", "B")), as.symbol)) %.% 
+                         summarise(concentrations=mean(concentrations, na.rm=T), 
+                         upper=sum(upper, na.rm=T), lower=sum(lower, na.rm=T))
     #revert to absolute errors
     data.protein.conc <- mutate(data.protein.conc, upper=(1+upper)*concentrations, lower=(1-lower)*concentrations)
     
