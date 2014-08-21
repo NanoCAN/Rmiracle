@@ -41,6 +41,7 @@ shinyUI(pageWithSidebar(
                      conditionalPanel(condition="input.normalizationMethod=='houseKeeping'",
                         uiOutput("HKslides"))
     ),
+    #selectInput("normalizeDepositions", "Merge depositions?", choices= c("No"="None", "Mean"="mean", "Linear Regression"="LinReg"), "None"),
     checkboxInput("groupingOptions", "Show sample options?", FALSE),
     conditionalPanel(condition = "input.groupingOptions",
                      uiOutput("sampleSelect"),

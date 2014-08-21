@@ -204,23 +204,23 @@ rppa.duplicate.nas <- function(data.protein.conc.copy)
 
 rppa.normalize.to.ref.sample <- function(data.protein.conc, sampleReference, each.A=F, each.B=F, specific.A=NULL, specific.B=NULL, each.fill=F, method="mean")
 {
-  require(plyr)
+  library(plyr)
   
   toRefSample <- function(data.protein.conc){ 
-    if(is.null(specific.A) && is.null(specific.B)) my.subset <- subset(data.protein.conc, Sample == sampleReference)
+    if(is.null(specific.A) && is.null(specific.B)) my.subset <- subset(data.protein.conc, Sample %in% sampleReference)
     else if(is.null(specific.B)){
-      if(!is.na(specific.A)) my.subset <- subset(data.protein.conc, Sample == sampleReference & A == specific.A)
-      else my.subset <- subset(data.protein.conc, Sample == sampleReference & is.na(A))
+      if(!is.null(specific.A)) my.subset <- subset(data.protein.conc, Sample %in% sampleReference & A == specific.A)
+      else my.subset <- subset(data.protein.conc, Sample %in% sampleReference & is.na(A))
     } 
     else if(is.null(specific.A)){
-      if(!is.na(specific.B)) my.subset <- subset(data.protein.conc, Sample == sampleReference & B == specific.B)
-      else  my.subset <- subset(data.protein.conc, Sample == sampleReference & is.na(B))
+      if(!is.null(specific.B)) my.subset <- subset(data.protein.conc, Sample %in% sampleReference & B == specific.B)
+      else  my.subset <- subset(data.protein.conc, Sample %in% sampleReference & is.na(B))
     } 
     else{
-      if(!is.na(specific.A) && !is.na(specific.B)) my.subset <- subset(data.protein.conc, Sample == sampleReference & A == specific.A & B == specific.B)
-      else if(is.na(specific.A) & !is.na(specific.B)) my.subset <- subset(data.protein.conc, Sample == sampleReference & B == specific.B & is.na(A))
-      else if(is.na(specific.B) & !is.na(specific.A)) my.subset <- subset(data.protein.conc, Sample == sampleReference & A == specific.A & is.na(B))
-      else my.subset <- subset(data.protein.conc, Sample == sampleReference & is.na(A) & is.na(B))  
+      if(!is.null(specific.A) && !is.null(specific.B)) my.subset <- subset(data.protein.conc, Sample %in% sampleReference & A == specific.A & B == specific.B)
+      else if(is.null(specific.A) & !is.null(specific.B)) my.subset <- subset(data.protein.conc, Sample %in% sampleReference & B == specific.B & is.na(A))
+      else if(is.null(specific.B) & !is.null(specific.A)) my.subset <- subset(data.protein.conc, Sample %in% sampleReference & A == specific.A & is.na(B))
+      else my.subset <- subset(data.protein.conc, Sample %in% sampleReference & is.na(A) & is.na(B))  
     } 
        
     if(method == "mean")  meanOfRefSample <- mean(my.subset$concentrations, na.rm=T)
@@ -235,8 +235,8 @@ rppa.normalize.to.ref.sample <- function(data.protein.conc, sampleReference, eac
   if(each.fill)
   {
     data.protein.conc <- ddply(data.protein.conc, intersect(colnames(data.protein.conc), c("A", "B", "Slide", "Fill")), function(x, sampleRef){ 
-          within(x, {
-              reference <- concentrations[Sample==sampleRef]
+      within(x, {
+              reference <- mean(concentrations[Sample %in% sampleRef], na.rm=T)
               concentrations <- concentrations / reference
               upper <- upper / reference
               lower <- lower / reference

@@ -207,17 +207,11 @@ shinyServer(function(input, output, session) {
   
   quantify <- function(slide){
     selA <- input$select.columns.A
-    if(is.null(selA)) selA <- NA
-    
     selB <- input$select.columns.B
-    if(is.null(selB)) selB <- NA
-    
     selFill <- input$select.columns.fill
-    if(is.null(selFill)) selFill <- NA
     
     #selSamples <- input$select.columns.sample
     selSamples <- "SampleName"
-    if(is.null(selSamples)) selFill <- NA
     switch(input$method,
            "sdc" = rppa.serialDilution(slide, select.columns.A=selA, select.columns.B=selB, select.columns.fill=selFill, make.plot=F),
            "tabus" = rppa.tabus(slide, select.columns.A=selA, select.columns.B=selB, select.columns.fill=selFill),
@@ -297,7 +291,17 @@ shinyServer(function(input, output, session) {
         })
       })
     }
-    else return(all.slides)
+#     if(input$normalizeDepositions!="None")
+#     {
+#       if(input$normalizeDepositions == "LinReg")
+#       {
+#         all.slides <- lapply(all.slides, rppa.normalize.depos)
+#       }
+#       
+#       all.slides <- lapply(all.slides, rppa.mean.depos)
+#     }
+
+    return(all.slides)
   })
   
   formattedSlides <- reactive({
@@ -317,7 +321,7 @@ shinyServer(function(input, output, session) {
           attr(slide, "readout") <- slide.readout
           attr(slide, "readout.centered") <- slide.readout.centered
           slide$Sample <- as.factor(slide$Sample)
-        }
+        }            
         
         if(!is.null(input$reference) && input$normalize.to.ref.sample){
           

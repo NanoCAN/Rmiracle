@@ -1,18 +1,18 @@
-rppa.proteinConc.plot <- function(data.protein.conc, title="", swap=F, horizontal.line=T, fill.legend=T, error.bars=T, scales="free", sample.subset=NA, reference=NA, slideAsFill=F, ...){
+rppa.proteinConc.plot <- function(data.protein.conc, title="", swap=F, horizontal.line=T, fill.legend=T, error.bars=T, scales="free", sample.subset=NULL, reference=NULL, slideAsFill=F, ...){
   
   library(ggplot2)
   library(gridExtra) 
   library(dplyr)
   
   #subset samples and reorder 
-  if(!is.na(sample.subset)[1])
+  if(!is.null(sample.subset))
   {
     data.protein.conc <- subset(data.protein.conc, Sample %in% sample.subset)
     data.protein.conc$Sample <- factor(data.protein.conc$Sample, sample.subset)
   }
   
   #normalize data
-  if(!is.na(reference)){
+  if(!is.null(reference)){
     data.protein.conc <- rppa.normalize.to.ref.sample(data.protein.conc, reference,...)    
   }
   
@@ -27,16 +27,7 @@ rppa.proteinConc.plot <- function(data.protein.conc, title="", swap=F, horizonta
   }
   
   else if(!is.null(data.protein.conc$Deposition)){  
-    data.protein.conc$Deposition <- as.factor(data.protein.conc$Deposition)
-    #convert error bars to percentage
-    data.protein.conc <- mutate(data.protein.conc, upper=(upper-concentrations)/concentrations, lower=(concentrations-lower)/concentrations)
-    data.protein.conc <- data.protein.conc %.% regroup(lapply(intersect(colnames(data.protein.conc), 
-                         c("Sample", "Fill", "A", "B")), as.symbol)) %.% 
-                         summarise(concentrations=mean(concentrations, na.rm=T), 
-                         upper=sum(upper, na.rm=T), lower=sum(lower, na.rm=T))
-    #revert to absolute errors
-    data.protein.conc <- mutate(data.protein.conc, upper=(1+upper)*concentrations, lower=(1-lower)*concentrations)
-    
+    data.protein.conc <- rppa.mean.depos(data.protein.conc)
     p <- qplot(Sample, concentrations, data=data.protein.conc, 
                main=title, stat="identity", 
                ylab="Estimated Protein Concentration (Relative Scale)",xlab="Sample", geom="bar", fill=Fill, position="dodge")
@@ -79,5 +70,19 @@ rppa.proteinConc.plot <- function(data.protein.conc, title="", swap=F, horizonta
   p <- p + theme(plot.margin = unit(c(1,2,1,1), "cm"))
   
   print(p)
+  return(data.protein.conc)
+}
+
+rppa.mean.depos <- function(data.protein.conc){
+  library(dplyr)
+  data.protein.conc$Deposition <- as.factor(data.protein.conc$Deposition)
+  #convert error bars to percentage
+  data.protein.conc <- mutate(data.protein.conc, upper=(upper-concentrations)/concentrations, lower=(concentrations-lower)/concentrations)
+  data.protein.conc <- data.protein.conc %.% regroup(lapply(intersect(colnames(data.protein.conc), 
+                                                                      c("Sample", "Fill", "A", "B")), as.symbol)) %.% 
+    summarise(concentrations=mean(concentrations, na.rm=T), 
+              upper=sum(upper, na.rm=T), lower=sum(lower, na.rm=T))
+  #revert to absolute errors
+  data.protein.conc <- mutate(data.protein.conc, upper=(1+upper)*concentrations, lower=(1-lower)*concentrations)
   return(data.protein.conc)
 }

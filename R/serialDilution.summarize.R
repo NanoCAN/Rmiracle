@@ -2,7 +2,7 @@ rppa.serialDilution.summarize <-
 function(data.protein.conc, method="mean", filter.bad.results=T,
                                           select.columns.sample=c("SampleName"), 
                                           select.columns.A=c("Treatment"),
-                                          select.columns.B=c("CellLine"), select.columns.fill=c("NumberOfCellsSeeded"), useDeposition=T)
+                                          select.columns.B=c("CellLine"), select.columns.fill=c("NumberOfCellsSeeded"), useDeposition=F)
 {
   data.protein.conc$x.err.percent <- data.protein.conc$x.err / data.protein.conc$x.weighted.mean
   
@@ -12,7 +12,7 @@ function(data.protein.conc, method="mean", filter.bad.results=T,
   
   newColumns <- Sample
   
-  if(!is.na(select.columns.A))
+  if(!is.null(select.columns.A))
   {
     if(length(select.columns.A) > 1) A <- apply(data.protein.conc[,select.columns.A], 1 , paste, collapse=" | ")
     else A <- data.protein.conc[,select.columns.A]
@@ -20,7 +20,7 @@ function(data.protein.conc, method="mean", filter.bad.results=T,
     newColumns = cbind(newColumns, A)
   }
   
-  if(!is.na(select.columns.B))
+  if(!is.null(select.columns.B))
   {
     if(length(select.columns.B) > 1) B <- apply(data.protein.conc[,select.columns.B], 1 , paste, collapse=" | ")
     else B <- data.protein.conc[,select.columns.B]
@@ -28,7 +28,7 @@ function(data.protein.conc, method="mean", filter.bad.results=T,
     newColumns = cbind(newColumns, B)
   }
   
-  if(!is.na(select.columns.fill))
+  if(!is.null(select.columns.fill))
   {
     if(length(select.columns.fill) > 1) Fill <- apply(data.protein.conc[,select.columns.fill], 1, paste, collapse=" | ")
     else Fill <- data.protein.conc[,select.columns.fill]
@@ -52,8 +52,8 @@ function(data.protein.conc, method="mean", filter.bad.results=T,
   result <- cbind(newColumns, data.protein.conc[,selection])
   
   selection <- c("Sample", "Fill")
-  if(!is.na(select.columns.A)) selection <- c(selection, "A")
-  if(!is.na(select.columns.B)) selection <- c(selection, "B")
+  if(!is.null(select.columns.A)) selection <- c(selection, "A")
+  if(!is.null(select.columns.B)) selection <- c(selection, "B")
   if(useDeposition) selection <- c(selection, "Deposition")
   
   result <- ddply(result, selection, summarise, readout=mean(PlateReadout, na.rm=T), readout.sem=sqrt(var(PlateReadout,na.rm=TRUE)/length(na.omit(PlateReadout))), x.weighted.mean=mean(x.weighted.mean, na.rm=T), x.err=sum(x.err.percent, na.rm=T), sem=sqrt(var(x.weighted.mean,na.rm=TRUE)/length(na.omit(x.weighted.mean))))
@@ -61,8 +61,8 @@ function(data.protein.conc, method="mean", filter.bad.results=T,
   
   #make sure A, B and sample are factors
   result$Sample <- as.factor(result$Sample)
-  if(!is.na(select.columns.A)) result$A <- as.factor(result$A)
-  if(!is.na(select.columns.B)) result$B <- as.factor(result$B)
+  if(!is.null(select.columns.A)) result$A <- as.factor(result$A)
+  if(!is.null(select.columns.B)) result$B <- as.factor(result$B)
   result$Fill <- as.factor(result$Fill)
 
   return(result)
