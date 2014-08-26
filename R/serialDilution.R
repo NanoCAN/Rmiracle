@@ -74,21 +74,20 @@ rppa.serialDilution <- function(spots, initial.dilution.estimate=2, sensible.min
   #combine estimates with signal information
   spots.result <- cbind(spots.c[,1:(ncol(spots.c)-numOfDilutions)], spots.e)
   
+  #filter values under detection limit or saturated
+  spots.result[!is.na(spots.result$xflag),"x.weighted.mean"] <- NA
+  
   if(!compress.results){
     attr(spots.result, "fit") <- fit
     return(spots.result)
   } 
   
-  #filter values under detection limit or saturated
-  if(nrow(subset(spots.result, !is.na(xflag))) > 0)
-  {
-    spots.result[!is.na(spots.result$xflag),]$x.weighted.mean <- NaN
-  }
   spots.summarize <- rppa.serialDilution.summarize(spots.result, ...)
+
   spots.summarize$concentrations <- spots.summarize$x.weighted.mean
   spots.summarize$upper <- spots.summarize$x.err + spots.summarize$x.weighted.mean
   spots.summarize$lower <- spots.summarize$x.weighted.mean - spots.summarize$x.err
-  
+    
   spots.summarize <- spots.summarize[,!(colnames(spots.summarize) %in% c("x.weighted.mean", "x.err", "flags"))]
   attr(spots.summarize, "title") <- attr(spots, "title")
   attr(spots.summarize, "antibody") <- attr(spots, "antibody")
@@ -235,7 +234,7 @@ rppa.serialDilution.protein.con <- function (D0,D,c,a,d.D,d.c, d.a, data.dilutes
   # Np 1:nrow(data.dilutes)   # index of samples
   x.weighted.mean= rep(NA,nrow(data.dilutes))
   x.err = x.weighted.mean
-  xflag = x.weighted.mean    # takes values of 0,1,2, which means under detection, OK, saturated
+  xflag = x.weighted.mean    # takes values of 0,NA,2, which means under detection, OK, saturated
   K = ncol(data.dilutes)   	# number of total dilution steps for a sample
   igamma = log(D0)/log(D)	#where gamma is 1/gamma, a parameter in Sips model
   M =min(6e4,1/c+a)			#when M is too large, take 1e9.

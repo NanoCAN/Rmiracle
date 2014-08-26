@@ -1,6 +1,5 @@
 rppa.serialDilution.summarize <-
-function(data.protein.conc, method="mean", filter.bad.results=T,
-                                          select.columns.sample=c("SampleName"), 
+function(data.protein.conc, method="mean", select.columns.sample=c("SampleName"), 
                                           select.columns.A=c("Treatment"),
                                           select.columns.B=c("CellLine"), select.columns.fill=c("NumberOfCellsSeeded"), useDeposition=F)
 {
@@ -43,9 +42,6 @@ function(data.protein.conc, method="mean", filter.bad.results=T,
     fillAttribute <- "Replicate"
   }
 
-  if(filter.bad.results){
-    data.protein.conc[!is.na(data.protein.conc$xflag), "x.weighted.mean"] <- NA
-  } 
   selection <- c("x.weighted.mean", "x.err.percent", "PlateReadout")
   if(!("PlateReadout" %in% colnames(data.protein.conc))) data.protein.conc$PlateReadout <- NA
   if(useDeposition) selection <- c(selection, "Deposition")
@@ -56,7 +52,7 @@ function(data.protein.conc, method="mean", filter.bad.results=T,
   if(!is.null(select.columns.B)) selection <- c(selection, "B")
   if(useDeposition) selection <- c(selection, "Deposition")
   
-  result <- ddply(result, selection, summarise, readout=mean(PlateReadout, na.rm=T), readout.sem=sqrt(var(PlateReadout,na.rm=TRUE)/length(na.omit(PlateReadout))), x.weighted.mean=mean(x.weighted.mean, na.rm=T), x.err=sum(x.err.percent, na.rm=T), sem=sqrt(var(x.weighted.mean,na.rm=TRUE)/length(na.omit(x.weighted.mean))))
+  result <- ddply(result, selection, summarise, readout=mean(na.omit(PlateReadout)), readout.sem=sqrt(var(PlateReadout,na.rm=TRUE)/length(na.omit(PlateReadout))), x.weighted.mean=mean(na.omit(x.weighted.mean)), x.err=sum(na.omit(x.err.percent)), sem=sqrt(var(x.weighted.mean,na.rm=TRUE)/length(na.omit(x.weighted.mean))))
   result$x.err <- result$x.weighted.mean * result$x.err
   
   #make sure A, B and sample are factors
