@@ -4,17 +4,17 @@ rppa.linear <- function(slide, select.columns.sample="SampleName", select.column
   slide$DilutionFactor <- as.factor(slide$DilutionFactor)
   slide$Deposition <- as.factor(slide$Deposition)
 
-  if(length(nchar(select.columns.sample)) == 1) selectedSamples <- as.character(slide[,select.columns.sample])
+  if(length(select.columns.sample) == 1) selectedSamples <- as.character(slide[,select.columns.sample])
   else selectedSamples <- apply(slide[,select.columns.sample],1, paste, collapse=" | ")
   
-  if(length(nchar(select.columns.A)) == 1) selA <- as.character(slide[,select.columns.A])
+  if(length(select.columns.A) == 1) selA <- as.character(slide[,select.columns.A])
   else selA <- apply(slide[,select.columns.A],1, paste, collapse=" | ")
   
-  if(length(nchar(select.columns.B)) == 1) selB <- as.character(slide[,select.columns.B])
+  if(length(select.columns.B) == 1) selB <- as.character(slide[,select.columns.B])
   else selB <- apply(slide[,select.columns.B],1, paste, collapse=" | ")              
   
-  if(length(nchar(select.columns.fill)) == 1) selFill <- as.character(slide[,select.columns.fill])
-  selFill <- apply(slide[,select.columns.fill],1, paste, collapse=" | ")
+  if(length(select.columns.fill) == 1) selFill <- as.character(slide[,select.columns.fill])
+  else selFill <- apply(slide[,select.columns.fill],1, paste, collapse=" | ")
   
   Sample <- apply(cbind(as.character(slide$SampleName), selA, selB, selFill), 1, paste, collapse="¤")
   df <- cbind(slide[,c("Signal", "DilutionFactor")], Sample)
