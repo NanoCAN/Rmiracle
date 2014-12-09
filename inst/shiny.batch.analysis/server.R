@@ -115,7 +115,7 @@ shinyServer(function(input, output, session) {
     titles <- c()
     slideIndices <- list()
     for(slide in all.slides){
-      title <- attr(slide, "antibody")
+      title <- paste(attr(slide, "title"), "-", attr(slide, "antibody"), "-PMT",attr(slide, "PMT"))
       slideIndex <- attr(slide, "slideIndex")
       if(onlySelected && !(slideIndex %in% input$selected.slides)) break;
       titles <- append(titles, title)

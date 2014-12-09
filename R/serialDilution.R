@@ -30,12 +30,14 @@ rppa.serialDilution.batch <- function(slideList)
   return(data.protein.conc)
 }
 
-rppa.serialDilution <- function(spots, initial.dilution.estimate=2, sensible.min=1, sensible.max=6e4, method="nls", compress.results=T, make.plot=T, ...)
+rppa.serialDilution <- function(spots, initial.dilution.estimate=2, sensible.min=1, sensible.max=6e4, method="nls", compress.results=T, make.plot=T, useDepositions=F,...)
 { 
   #get title
   slideTitle <- attr(spots, "title")
   
-  spots <- subset(spots, SpotClass=="Sample")
+  #subset to sample spots if possible
+  sample.spots <- subset(spots, SpotClass=="Sample")
+  if(!is.null(dim(sample.spots))) spots <- sample.spots
   
   #convert input table so that each dilution is in one column
   spots.c <- rppa.serialDilution.format(spots)
@@ -106,10 +108,14 @@ rppa.serialDilution <- function(spots, initial.dilution.estimate=2, sensible.min
   return(spots.summarize)
 }
 
-rppa.serialDilution.format <- function(spots) {  
+rppa.serialDilution.format <- function(spots, useDepositions=F) {  
   require(reshape)
   
   title <- attr(spots, "title")
+  
+  #make sure dilution factor and deposition is not NA
+  if(length(unique(spots$DilutionFactor)) == 1 && is.na(unique(spots$DilutionFactor))) spots$DilutionFactor <- 1
+  if(length(unique(spots$Deposition)) == 1 && is.na(unique(spots$Deposition))) spots$Deposition <- 1
   
   #filter NA values
   spots <- spots[!is.na(spots$DilutionFactor),]
@@ -117,10 +123,16 @@ rppa.serialDilution.format <- function(spots) {
   
   #transform continuous into descrete
   spots$DilutionFactor <- as.factor(spots$DilutionFactor)
-  groupingCols <- c(groupingCols, "Deposition")
+  #if(!useDepositions) groupingCols <- c(groupingCols, "Deposition")
   groupingCols <- paste(groupingCols, collapse = " + ")
-  spots.c <- cast(spots, as.formula(paste(groupingCols, "DilutionFactor", sep=" ~ ")), value="Signal", add.missing=FALSE, fun.aggregate="median", na.rm=T)
-  attr(spots.c, "numOfDilutions") <- length(levels(spots$DilutionFactor))
+  
+  if(useDepositions) dilutions <- "DilutionFactor+Deposition"
+  else dilutions <- "DilutionFactor"    
+  
+  spots.c <- cast(spots, as.formula(paste(groupingCols, dilutions, sep=" ~ ")), value="Signal", add.missing=FALSE, fun.aggregate="median", na.rm=T)
+  
+  if(useDepositions) attr(spots.c, "numOfDilutions") <- length(levels(spots$DilutionFactor)) * length(unique(spots$Deposition))  
+  else attr(spots.c, "numOfDilutions") <- length(levels(spots$DilutionFactor))
 
   return(spots.c)
 } 
@@ -205,7 +217,7 @@ rppa.serialDilution.compute <- function(spots.m, initial.dilution.estimate=2.5, 
     #plot serial dilution curve
     library(ggplot2)
     library(gridExtra)
-    #print(ggplot(fittedData, aes(x=y, y=log2(x))) + labs(title=paste("Signal to concentration estimate plot: ", slideTitle)) + ylab("Signal") + xlab("Concentration estimate") + geom_point(aes(color=as.factor(depos))) + geom_smooth(aes(group=depos), method="loess"))
+    print(ggplot(fittedData, aes(x=y, y=log2(x))) + labs(title=paste("Signal to concentration estimate plot: ", slideTitle)) + ylab("Signal") + xlab("Concentration estimate") + geom_point(aes(color=as.factor(depos))) + geom_smooth(aes(group=depos), method="loess"))
     sdc.plot <- ggplot(pairedData, aes(x=x, y=y)) + labs(title=paste("Serial Dilution Curve Fit: ", slideTitle, ", estimated dilution factor ", round(D, 2))) + xlab("Signal at next dilution step") + ylab("Signal") + geom_point(aes(color=as.factor(depos))) #+ coord_cartesian(ylim = c(0, sensible.max)) 
     sdc.plot <- sdc.plot + geom_abline(intercept=0, slope=1, color="red")
 
