@@ -115,7 +115,7 @@ shinyServer(function(input, output, session) {
     titles <- c()
     slideIndices <- list()
     for(slide in all.slides){
-      title <- paste(attr(slide, "title"), "-", attr(slide, "antibody"), "-PMT",attr(slide, "PMT"))
+      title <- paste(attr(slide, "slideIndex"), "-", attr(slide, "antibody"), "- PMT",attr(slide, "PMT"))
       slideIndex <- attr(slide, "slideIndex")
       if(onlySelected && !(slideIndex %in% input$selected.slides)) break;
       titles <- append(titles, title)
@@ -349,7 +349,7 @@ shinyServer(function(input, output, session) {
     concentrations <- foreach(slide=all.slides, .combine=cbind) %do% {
       slide$concentrations  
     } 
-    colnames(concentrations) <- paste(slideTitles(), names(slideTitles()))
+    colnames(concentrations) <- names(slideTitles())
     
     if(input$includeReadoutInCorrelation){
       readout <- attr(all.slides[[1]], "readout")
@@ -364,7 +364,7 @@ shinyServer(function(input, output, session) {
     concentrations <- foreach(slide=all.slides, .combine=cbind) %do% {
       slide$Signal  
     } 
-    colnames(concentrations) <- paste(slideTitles(), names(slideTitles()))
+    colnames(concentrations) <- names(slideTitles())
     cor(concentrations, use="pairwise.complete.obs")
   })
   
@@ -409,7 +409,8 @@ shinyServer(function(input, output, session) {
     p <- p + geom_text(aes(fill = melted.correlations$value, label = round(melted.correlations$value, 2)), colour="white")
     p <- p + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
                    panel.margin = unit(0.1, "lines"), panel.margin = unit(0, "lines"), plot.margin = unit(c(1, 1, 0.5, 0.5), "lines"),
-                   plot.title = element_text(size = 18), strip.background = element_rect(fill = "grey90", colour = "grey50"))
+                   plot.title = element_text(size = 18), strip.background = element_rect(fill = "grey90", colour = "grey50"),
+                   axis.text.x = element_text(angle = 90, hjust = 1))    
     return(p)
   }
   
