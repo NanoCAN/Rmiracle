@@ -1,5 +1,4 @@
 library(shiny)
-library(shinyIncubator)
 
 shinyUI(pageWithSidebar(
   headerPanel("Rmiracle"),
@@ -59,7 +58,6 @@ shinyUI(pageWithSidebar(
       selectInput("tableFileType", "Select file type for table downloads", choices=c("CSV", "CSV2", "TAB"), selected="TAB")
   ),
   mainPanel(
-    progressInit(),
     tabsetPanel(
       tabPanel("Heatmap", 
         uiOutput("selectHeatmapSlide"),

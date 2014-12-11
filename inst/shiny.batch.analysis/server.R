@@ -2,7 +2,6 @@
 Sys.setlocale("LC_ALL", "en_US.UTF-8")
 
 library(shiny)
-library(shinyIncubator)
 library(stringr)
 library(Rmiracle)
 library(reshape2)
@@ -33,7 +32,7 @@ shinyServer(function(input, output, session) {
     if(length(query$slideSecurityTokens) > 0) slideTokens <- str_split(query$slideSecurityTokens, "\\|")[[1]]
     else return(NULL)
     
-    withProgress(session, min=1, max=(length(slideTokens)+1), expr={
+    withProgress(min=1, max=(length(slideTokens)+1), expr={
       setProgress(message = 'Fetching readout data from MIRACLE...',
                   detail = 'Please be patient!',
                   value=0)
@@ -226,7 +225,7 @@ shinyServer(function(input, output, session) {
       input$updateButton
       
       isolate({
-        withProgress(session, min=0, max=length(all.slides), {
+        withProgress(min=0, max=length(all.slides), expr={
           counter <- 0
           setProgress(message = 'Calculation in progress',
                       detail = 'This may take a while...', value=counter)
@@ -280,7 +279,7 @@ shinyServer(function(input, output, session) {
       
       counter <- 1
       
-      withProgress(session, min=1, max=length(all.slides), {
+      withProgress(min=1, max=length(all.slides), expr={
         setProgress(message = 'Calculation in progress',
                     detail = 'This may take a while...')
         lapply(all.slides, function(slide){
@@ -382,7 +381,7 @@ shinyServer(function(input, output, session) {
     } else { checkResult <- ddply(slide[,c("Sample", "A", "B")], .(Sample, A, B), summarise, freq=length(Sample)) 
     }
     if(min(checkResult$freq) < 2) stop("Not enough replicates for all selected samples, try a different color fill category (used to determine replicates) or exclude samples with too few replicates.")
-    withProgress(session, min=1, max=5, {
+    withProgress(min=1, max=5, expr={
       setProgress(message = 'Performing Dunnett test',
                   detail = 'a few seconds away...')
       results <- rppa.dunnett(slide=slide, referenceSample=input$reference)
