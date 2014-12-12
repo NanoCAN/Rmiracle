@@ -282,7 +282,7 @@ shinyServer(function(input, output, session) {
       withProgress(min=1, max=length(all.slides), expr={
         setProgress(message = 'Calculation in progress',
                     detail = 'This may take a while...')
-        lapply(all.slides, function(slide){
+        all.slides <- lapply(all.slides, function(slide){
           setProgress(value = counter, detail=paste("Normalizing slide", attr(slide, "slideIndex")))
           slide <- rppa.proteinConc.normalize(slide, slidesForNormalization, method=input$normalizationMethod)
           counter <- counter + 1
