@@ -490,7 +490,7 @@ shinyServer(function(input, output, session) {
     all.slides <- formattedSlides()
     data.protein.conc <- ldply(all.slides)
     data.protein.conc$Slide <- apply(data.protein.conc, 1, function(x){
-      paste(x[1], ":", names(slideTitles()[slideTitles()==x[1]]), sep="")
+      names(slideTitles()[slideTitles()==x[1]])
     })
     
     if(input$includeReadoutInComparison){
