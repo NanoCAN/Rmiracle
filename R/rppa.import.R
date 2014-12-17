@@ -66,7 +66,7 @@ rppa.loadFromFile <- function(fileName=NULL, filter.diameter=T, filter.neg.value
  
   #load files
   if(is.null(fileName)) fileName <- file.choose()
-  spots <- read.delim(fileName, skip=8,na.string=c("NA", "null"))
+  spots <- read.delim(fileName, skip=9,na.string=c("NA", "null"))
   
   #apply shifts
   spots <- rppa.vshift(spots)
@@ -95,6 +95,7 @@ rppa.loadFromFile <- function(fileName=NULL, filter.diameter=T, filter.neg.value
   if(filter.neg.values) spots <- rppa.filter.neg.values(spots)
   
   attr(spots, "slideIndex") <- readLines(con,1)
+  attr(spots, "barcode") <- readLines(con,1)
   spots <- rppa.set.title(spots, readLines(con,1))
   spots <- rppa.set.antibody(spots, readLines(con,1))
   attr(spots, "PMT") <- as.integer(readLines(con,1))

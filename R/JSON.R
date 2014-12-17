@@ -215,12 +215,18 @@ rppa.load <- function (connection=NULL, barcode=NA, slideIndex=NA, securityToken
   
   pmtUrl <- paste(baseUrl, "getPMT/", slideIndex, sep = "")                     
   if(!is.na(securityToken)) pmtUrl <- paste(pmtUrl, "?securityToken=", securityToken, sep="")
+
+  barcodeUrl <- paste(baseUrl, "getBarcode/", slideIndex, sep = "")                     
+  if(!is.na(securityToken)) barcodeUrl <- paste(barcodeUrl, "?securityToken=", securityToken, sep="")
   
   spots <- rppa.set.blocksPerRow(spots, as.integer(scan(text=getURL(blocksUrl, curl=connection), what = "integer")))
   attr(spots, "PMT") <- as.integer(scan(text=getURL(pmtUrl, curl=connection), what = "integer"))
   spots <- rppa.set.title(spots, paste(scan(text=getURL(titleUrl, curl=connection), what = "character"), collapse=" "))
   spots <- rppa.set.antibody(spots, paste(scan(text=getURL(antibodyUrl, curl=connection), what = "character"), collapse=" "))
   attr(spots, "slideIndex") <- slideIndex
+  
+  if(!is.na(barcode)) attr(spots, "barcode") <- barcode
+  else attr(spots, "barcode") <- scan(text=getURL(barcodeUrl, curl=connection), what = "character")
   message("...everything done. returning data.")
   return(spots)
 }

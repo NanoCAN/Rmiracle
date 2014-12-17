@@ -51,6 +51,7 @@ shinyServer(function(input, output, session) {
           newSlide <- merge(currentSlide, readouts[,c("PlateLayout", "PlateRow", "PlateCol", "PlateReadout")], all.x=T, by=c("PlateLayout", "PlateRow", "PlateCol"))
           #attributes(newSlide) <- attributes(currentSlide)
           attr(newSlide, "antibody") <- attr(currentSlide, "antibody")
+          attr(newSlide, "barcode") <- attr(currentSlide, "barcode")
           attr(newSlide, "slideIndex") <- attr(currentSlide, "slideIndex")
           attr(newSlide, "title") <- attr(currentSlide, "title")
           attr(newSlide, "blocksPerRow") <- attr(currentSlide, "blocksPerRow")
@@ -114,7 +115,7 @@ shinyServer(function(input, output, session) {
     titles <- c()
     slideIndices <- list()
     for(slide in all.slides){
-      title <- paste(attr(slide, "slideIndex"), "-", attr(slide, "antibody"), "- PMT",attr(slide, "PMT"))
+      title <- paste(attr(slide, "slideIndex"), "-", attr(slide, "barcode"),"-", attr(slide, "antibody"), "- PMT",attr(slide, "PMT"))
       slideIndex <- attr(slide, "slideIndex")
       if(onlySelected && !(slideIndex %in% input$selected.slides)) break;
       titles <- append(titles, title)
