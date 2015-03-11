@@ -24,11 +24,16 @@ shinyServer(function(input, output, session) {
     rppa.load(baseUrl=baseUrl, securityToken=securityToken)
   }  
   
-  loadAllSlides <- reactive({
-    
+  getBaseUrl <- reactive({
     query <- parseQueryString(session$clientData$url_search)
     if(length(query$baseUrl > 0)) baseUrl <- query$baseUrl
     else baseUrl <- "http://localhost:8080/MIRACLE/spotExport/"
+    return(baseUrl)
+  })
+  
+  loadAllSlides <- reactive({    
+    baseUrl <- getBaseUrl()
+    query <- parseQueryString(session$clientData$url_search)    
     if(length(query$slideSecurityTokens) > 0) slideTokens <- str_split(query$slideSecurityTokens, "\\|")[[1]]
     else return(NULL)
     
@@ -68,14 +73,16 @@ shinyServer(function(input, output, session) {
     })
   })
   
-  loadAllReadouts <- reactive({  
-    query <- parseQueryString(session$clientData$url_search)
-    if(length(query$baseUrl > 0)) baseUrl <- query$baseUrl
-    else baseUrl <- "http://localhost:8080/MIRACLE/readoutExport/"
+  loadAllReadouts <- reactive({ 
+    baseUrl <- getBaseUrl()
+    baseUrl <- substr(baseUrl, 1, nchar(baseUrl)-11)
+    baseUrl <- paste(baseUrl, "readoutExport/", sep="")
+    
+    query <- parseQueryString(session$clientData$url_search)    
     if(query$plateSecurityTokens != "") plateTokens <- str_split(query$plateSecurityTokens, "\\|")[[1]]
     else return(NULL)
 
-    rppa.batch.load.readouts(plateSecurityTokens=plateTokens)
+    rppa.batch.load.readouts(plateSecurityTokens=plateTokens,baseUrl = baseUrl)
   })
   
   files <- reactive({
@@ -179,7 +186,7 @@ shinyServer(function(input, output, session) {
   output$referenceSelect <- renderUI({
     spots <- slides()[[1]]
     if(is.null(spots)) return(NULL)
-    selectInput("reference", "Choose reference sample (negative control)", c(as.character(sort(unique(spots$SampleName)))))
+    selectInput("reference", "Choose reference sample (negative control)", c(as.character(sort(unique(spots$SampleName)))), multiple=TRUE)
   })
 
   slideProperties <- function(){

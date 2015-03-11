@@ -78,8 +78,8 @@ rppa.mean.depos <- function(data.protein.conc){
   data.protein.conc$Deposition <- as.factor(data.protein.conc$Deposition)
   #convert error bars to percentage
   data.protein.conc <- mutate(data.protein.conc, upper=(upper-concentrations)/concentrations, lower=(concentrations-lower)/concentrations)
-  data.protein.conc <- data.protein.conc %.% regroup(lapply(intersect(colnames(data.protein.conc), 
-                                                                      c("Sample", "Fill", "A", "B")), as.symbol)) %.% 
+  data.protein.conc <- data.protein.conc %>% regroup(lapply(intersect(colnames(data.protein.conc), 
+                                                                      c("Sample", "Fill", "A", "B")), as.symbol)) %>% 
     summarise(concentrations=mean(concentrations, na.rm=T), 
               upper=sum(upper, na.rm=T), lower=sum(lower, na.rm=T))
   #revert to absolute errors

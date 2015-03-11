@@ -157,6 +157,7 @@ rppa.load <- function (connection=NULL, barcode=NA, slideIndex=NA, securityToken
   
   spots <- getURL(spotsUrl, curl=connection)
   spots <- ldply(fromJSON(spots, simplify = T, nullValue = NA))
+  if(dim(spots)[1] == 0) stop(paste("slide", slideIndex, "contains no spots"))
   cat(paste(dim(spots)[1], "spots read. Formatting...\n"))
   
   metaUrl <- paste(baseUrl, "exportMetaDataAsJSON/", slideIndex, sep = "")

@@ -1,7 +1,8 @@
 library(shiny)
 
 shinyUI(pageWithSidebar(
-  headerPanel("Rmiracle"),
+  headerPanel(HTML('<img style="height:40px; margin-top: -7px;" src="Rlogo.png"/>
+                    <img style="height:40px; margin-top: -7px;" src="miracle_logo.png"/>')),
   sidebarPanel(
     tags$head( 
       tags$link(rel="stylesheet", type="text/css", 
