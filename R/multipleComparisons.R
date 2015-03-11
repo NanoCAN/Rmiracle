@@ -107,7 +107,7 @@ rppa.plot.dunnett <- function(pvalues, p.cutoff=1, set.neg.control.to.one=F, tit
   q <- qplot(x=Samples, y=estimates, data=pvalues.subset, main=title, fill=pvalues, ylab="estimated difference", geom="bar", stat="identity", label=symbol)
   q <- q + geom_errorbar(limits, position="dodge", width=0.25)
   q <- q + theme(axis.text.x = element_text(angle=-45, hjust=0, vjust=1))
-  q <- q + scale_fill_gradient2(low="red", trans="log", mid="orange", high="yellow", breaks=breaks, na.value="darkred", guide=guide_legend(keyheight=1), labels=paste(breaks, c("", "", ".", "*", "**", rep("***",6))))
+  q <- q + scale_fill_gradient2(low="red", trans="log", mid="orange", high="yellow", breaks=breaks, na.value="darkred", guide=guide_legend(keyheight=1), labels=paste(breaks, c("", "", "*", "**",rep("***",7))))
   if(!is.null(pvalues$A) && !is.null(pvalues$B)) q <- q + facet_grid(A ~ B)
   else if(is.null(pvalues$A) && !is.null(pvalues$B)) q <- q + facet_grid(~B)
   else if(is.null(pvalues$B) && !is.null(pvalues$A)) q <- q + facet_grid(~A)
