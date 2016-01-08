@@ -16,7 +16,7 @@ rppa.serialDilution.batch <- function(slideList)
   for(slide in slideList)
   {
     if(is.null(attr(slide, "title"))){
-      cat("One or more slides are without title! Please use rppa.set.title to assign a title before comparing multiple slides.")
+      stop("One or more slides are without title! Please use rppa.set.title to assign a title before comparing multiple slides.")
       return()
     }
   }
@@ -44,6 +44,8 @@ rppa.serialDilution <- function(spots, initial.dilution.estimate=2, sensible.min
   
   #extract number of different dilutions that are not NA
   numOfDilutions <- length(unique(spots$DilutionFactor[!is.na(spots$DilutionFactor)])) 
+  
+  if(numOfDilutions <= 1) stop("Less than two dilutions found in data. Cannot compute a serial dilution curve.")
   
   #calculate matrix of dilutions
   spots.m <- rppa.serialDilution.dilutionMatrix(spots.c, numOfDilutions)
