@@ -1,14 +1,17 @@
 rppa.proteinConc.normalize <- function(slideA, slideB, method="houseKeeping", normalize.with.median.first = T, 
                                        target.column="Slide", normalize.per.deposition=F, output.all=F)
 { 
-  #which index is the median value selected for normalization. 
+  #which index is the median value selected for normalization. Ties are broken by choosing the first element
   which.median = function(x) {
-    if (length(x) %% 2 != 0) {
-      which(x == median(x))
-    } else if (length(x) %% 2 == 0) {
-      a = sort(x)[c(length(x)/2, length(x)/2+1)]
-      c(which(x == a[1]), which(x == a[2]))
+    if (length(x)%%2 != 0) {
+      result <- which(x == median(x))
     }
+    else if (length(x)%%2 == 0) {
+      a = sort(x)[c(length(x)/2, length(x)/2 + 1)]
+      result <- which(x == a[1])
+    }
+    if(length(result) > 1) return(result[1])
+    else return(result)
   }
   
   #check if supported method has been selected
@@ -96,7 +99,7 @@ rppa.proteinConc.normalize <- function(slideA, slideB, method="houseKeeping", no
     #variable slope normalization follows the same principle, but applies a correction factor gamma first.
     
     #take the median of each row
-    medians <- apply(allConcentrations, 1, which.median)
+    medians <- unlist(apply(allConcentrations, 1, which.median))
     
     #index of the median is needed for finding the 
     #corresponding confidence intervals
