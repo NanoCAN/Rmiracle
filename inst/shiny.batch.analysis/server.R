@@ -6,7 +6,7 @@ library(stringr)
 library(Rmiracle)
 library(reshape2)
 
-source("source//multiplot.R")
+source("source/multiplot.R")
 
 shinyServer(function(input, output, session) {
   
