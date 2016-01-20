@@ -19,25 +19,20 @@ rppa.proteinConc.plot <- function(data.protein.conc, title="", swap=F, horizonta
   #plot protein concentrations  
   limits <- aes(ymax = upper, ymin= lower)
   dodge <- position_dodge(width=0.9)
-  if(slideAsFill)
-  {
-    p <- qplot(Sample, concentrations, data=data.protein.conc, 
-               main=title, stat="identity", 
-               ylab="Estimated Protein Concentration (Relative Scale)",xlab="Sample", geom="bar", fill=Slide, position="dodge")
-  }
-  
-  else if(!is.null(data.protein.conc$Deposition)){  
+  if(slideAsFill) fill <- "Slide"
+  else fill <- "Fill"
+
+  p <- ggplot(data.protein.conc, aes_string(x="Sample", y="concentrations", fill=fill)) + ggtitle(title) +
+                geom_bar(stat="identity", position="dodge") +
+                ylab("Estimated Protein Concentration (Relative Scale)") +
+                xlab("Sample")
+              
+  if(!is.null(data.protein.conc$Deposition)){  
     data.protein.conc <- rppa.mean.depos(data.protein.conc)
-    p <- qplot(Sample, concentrations, data=data.protein.conc, 
-               main=title, stat="identity", 
-               ylab="Estimated Protein Concentration (Relative Scale)",xlab="Sample", geom="bar", fill=Fill, position="dodge")
   }
   else if(!is.null(data.protein.conc$Fill))
   {
     data.protein.conc$Fill <- as.factor(data.protein.conc$Fill)
-    p <- qplot(Sample, concentrations, data=data.protein.conc, 
-               main=title, stat="identity",
-               ylab="Estimated Protein Concentration (Relative Scale)",xlab="Sample", geom="bar", fill=Fill, position="dodge")   
     if(fill.legend){
       p <- p + guides(fill=guide_legend(title=NULL))
     }
@@ -46,9 +41,7 @@ rppa.proteinConc.plot <- function(data.protein.conc, title="", swap=F, horizonta
     }
   }
   else { 
-    p <- qplot(Sample, concentrations, data=data.protein.conc, 
-               main=title, stat="identity",
-               ylab="Estimated Protein Concentration (Relative Scale)",xlab="Sample", geom="bar")
+    fill <- NULL
   }
   
   if(!is.null(data.protein.conc$B) && !is.null(data.protein.conc$A)){
