@@ -26,22 +26,25 @@ rppa.plot.heatmap <- function(spots, log=NA, fill="Signal", plotNA=T, palette="S
   
   if(!is.na(log))
   {
-    if(log=="log2") spots$Signal <- log2(spots[["Signal"]])  
-    else if(log=="log10") spots$Signal <- log10(spots[["Signal"]])
+    if(log=="log2") spots$Signal <- log2(spots[[fill]])  
+    else if(log=="log10") spots$Signal <- log10(spots[[fill]])
+  }
+  else{
+    spots$Signal <- spots[[fill]]
   }
   
   p <- ggplot(spots, aes(x=Column, y=Row)) + ggtitle(title)
   
   if(plotNA) 
   {
-    p <- p + geom_tile(data=subset(spots, !is.na(Signal)), line=0, aes_string(fill = fill));
+    p <- p + geom_raster(data=subset(spots, !is.na(Signal)), aes_string(fill = fill));
     if(nrow(subset(spots,is.na(Signal)))!=0)
     {
-      p <- p + geom_tile(data=subset(spots, is.na(Signal)), line=0, fill="black");
+      p <- p + geom_raster(data=subset(spots, is.na(Signal)), fill="black");
     }
   }
   else {
-    p <- p + geom_tile(data=spots, line=0, aes_string(fill = fill));
+    p <- p + geom_raster(data=spots, aes_string(fill = fill));
   }
   
   #how many blocks per row?
@@ -94,4 +97,5 @@ rppa.heatmap <- function(spots){
 , discreteColorB = picker("red", "darkblue", "blue", "steelblue", "magenta", "yellow", "white", "green")
   )
 }
+
 

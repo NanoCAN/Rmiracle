@@ -41,8 +41,10 @@ Suggests:
     SuperCurve,
     manipulate,
     aroma.light,
-    edgeR
+    edgeR,
+    manipulate
 Collate:
+    'rppaClasses.R'
     'HuNonParam.R'
     'JSON.R'
     'attributes.R'

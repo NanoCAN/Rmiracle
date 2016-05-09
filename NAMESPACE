@@ -1,1 +1,3 @@
-exportPattern("^[[:alpha:]]+")
+import(methods)
+exportClasses(RPPArray,SampleGroup)
+exportMethods(plot)
