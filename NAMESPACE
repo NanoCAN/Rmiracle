@@ -1,3 +1,4 @@
 import(methods)
 exportClasses(RPPArray,SampleGroup)
 exportMethods(plot)
+exportPattern("^rppa.[[:alpha:]]+")
