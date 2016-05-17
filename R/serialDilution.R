@@ -33,7 +33,6 @@ rppa.serialDilution.batch <- function(slideList)
 rppa.serialDilution <- function(spots, initial.dilution.estimate=2, sensible.min=1, sensible.max=6e4, method="nls", compress.results=T, make.plot=T, useDepositions=F,...)
 { 
   #get title
-  browser()
   slideTitle <- attr(spots, "title")
   
   #subset to sample spots if possible
